@@ -1,0 +1,2195 @@
+<html>
+	<head>
+		<meta charset="utf-8">
+		<link href="data:image/gif;base64,R0lGODlhEAAQAMQfACnUdyi3aLvRxSeZW1n+rCiLVa7GuSirYyjAbSl3TCjJcXSahZfQsavixDbjh5KzoUSvdChrRnezkkPtlR91RUp8YCejXx1eOh7Ial/Cix2TUyWBTiC/aF+whHXPnv///yH5BAEAAB8ALAAAAAAQABAAAAWZ4CeKTAdBGTOun1EMVoAgHNKw0jYcsgL8GM/IQCnEEL4JgeDA3D4JHc/nWC4BiFZxhwRUrQBOY7Gd/pSESdhTSbx4Xa8DoEBA2q+jwverByALERtGcEh7CAEWEgYXbjA8AZGRBxoCHxGCeRYHnAcWAwUiAo2DLwOnoBuWIg8XEVEFsQUbFA8sAhGuCQkUFAmrLC0LFRULBiwhADs=" rel="icon" type="image/gif"/>
+		<title>Jawbreaker Game</title>
+		<style type="text/css">
+			body {
+				-webkit-tap-highlight-color: rgba(0,0,0,0);
+				touch-action: manipulation;
+				user-select: none;
+				-webkit-touch-callout: none;
+				-webkit-user-select: none;
+				-khtml-user-select: none;
+				-moz-user-select: none;
+				-ms-user-select: none;
+				outline: none;
+				text-align: center;
+			}
+		</style>
+	</head>
+	<body>
+		<script type="text/javascript">
+			var gameJawbreakerInstances = [];
+			class Settings {
+				constructor( parentElement, canv, params ) {
+					this.version = '1.00';
+					this.gameModes = [ 'standard', 'continuous', 'shifter', 'megashift' ];
+					this.gameModeNames = [ 'Standard', 'Continuous', 'Shifter', 'Megashift' ];
+					this.gameModeIndex = 1;
+					this.scaleFactor = window.devicePixelRatio > 1 ? 2 : 1;
+					this.reportedLandscape = null;
+					this.reportedSize = null;
+					this.playSound = true;
+
+					this.headerTextFontColor = '#000000';
+					this.headerTextFont = 'Arial';
+					this.headerTextFontSize = 36; //% of cell size
+					this.headerTextPaddingX = 6; //% of cell size
+					this.headerTextPaddingY = 12; //% of cell size
+
+					this.undoIconHoverColor = '#5555FF';
+
+					this.headerPadding = 40; //% of cell size
+
+					this.lineWidth = 1 * this.scaleFactor; //px
+					this.borderWidth = this.lineWidth; //px
+					this.draw3dBalls = true;
+					this.newBallsSize = 40; //% of cell size
+					this.nextBallsSize = 63; //% of cell size
+					this.existingBallsSize = 100; //% of cell size
+					this.pointsHintSize = 120; //% of cell size
+
+					this.borderColor = '#AAAAAA';
+					this.backgroundColor = '#F8F8F8';
+					this.backgroundGridColor = '#F8F8F8';
+
+					this.xFieldSize = 11;
+					this.yFieldSize = 12;
+					this.yFieldBallsSize = this.yFieldSize;
+					this.colors = [ { ballColor: '#BB0000', hintColor: '#FFB0B0', hintFontColor: '#000000', hintBorderColor: '#000000', hoverColor: '#DCDCDC', hoverBorderColor: '#DCDCDC', activeColor: '#D4D4D4', activeBorderColor: '#000000' },
+									{ ballColor: '#009933', hintColor: '#A0FFB0', hintFontColor: '#000000', hintBorderColor: '#000000', hoverColor: '#DCDCDC', hoverBorderColor: '#DCDCDC', activeColor: '#D4D4D4', activeBorderColor: '#000000' },
+									{ ballColor: '#0000BB', hintColor: '#50D0FF', hintFontColor: '#000000', hintBorderColor: '#000000', hoverColor: '#DCDCDC', hoverBorderColor: '#DCDCDC', activeColor: '#D4D4D4', activeBorderColor: '#000000' },
+									{ ballColor: '#BBBB00', hintColor: '#FFFFB0', hintFontColor: '#000000', hintBorderColor: '#000000', hoverColor: '#DCDCDC', hoverBorderColor: '#DCDCDC', activeColor: '#D4D4D4', activeBorderColor: '#000000' },
+									{ ballColor: '#AA44AA', hintColor: '#FFB0FF', hintFontColor: '#000000', hintBorderColor: '#000000', hoverColor: '#DCDCDC', hoverBorderColor: '#DCDCDC', activeColor: '#D4D4D4', activeBorderColor: '#000000' } ];
+					this.xMargin = 50 //% of cell size;
+					this.yMargin = 15 //% of cell size;
+
+					this.constantAnimationLength = true;
+
+					this.moveDownAnimationLength = 170; //total length if constantAnimationLength = false
+					this.moveDownAnimationLengthConstantPerCell = 70; //in ms per one square moved if constantAnimationLength = true
+					this.moveRightAnimationLength = 140; //total length if constantAnimationLength = false
+					this.moveRightAnimationLengthConstantPerCell = 58; //in ms per one square moved if constantAnimationLength = true
+
+					this.spawnAnimationLength = 250; //in ms
+					this.deleteAnimationLength = 250; //in ms
+
+					this.lightSources = [
+						{
+							xScale: 0.38, //  position of light in % to ball size
+							yScale: -0.38, // position of light in % to ball size
+							lum : 255, // total luminance for this light
+							comp : "source-over", // composite opperation
+							highlight: true,
+							spec : false, // if true then use a pretend specular falloff
+							specPower: 1,
+							useAmbient : true
+						}
+					];
+					this.lightAmbient = [40, 40, 40];
+
+					if( params ) {
+						this.setConfigProperty( 'reportedLandscape', params.isLandscape, true );
+						this.setConfigProperty( 'reportedSize', params.boardSize, true );
+						this.setConfigProperty( 'draw3dBalls', params.draw3dBalls, false );
+						this.setConfigProperty( 'playSound', params.sound, false );
+						if( params.gameModeIndex && Number.isInteger( Number( params.gameModeIndex ) ) && params.gameModeIndex > 0 && params.gameModeIndex <= this.gameModes.length ) {
+							this.gameModeIndex = params.gameModeIndex;
+							if( this.gameModeIndex < 0 || this.gameModeIndex > this.gameModes.length ) this.gameModeIndex = 1;
+						} else if( params.gameMode && ( typeof params.gameMode == 'string' || params.gameMode instanceof String ) && this.gameModes.includes( params.gameMode ) ) {
+							this.gameModeIndex = this.gameModes.indexOf( params.gameMode ) + 1;
+							if( this.gameModeIndex < 0 ) this.gameModeIndex = 1;
+						}
+					}
+					this.hasNextBalls = this.gameModeIndex == 2 || this.gameModeIndex == 4;
+
+					this.isMobile = this.isDeviceMobile();
+					this.isLandscape = this.isDeviceLandscape();
+					this.calculateBoardSize( parentElement, canv, this.reportedLandscape, this.reportedSize );
+					if( this.hasNextBalls ) {
+						this.yFieldBallsSize--;
+					}
+				}
+
+				isDeviceMobile() {
+					return ('ontouchstart' in document.documentElement);
+				}
+
+				isDeviceLandscape( resizeEvent ) {
+					let isSafari = !!navigator.userAgent.match(/Version\/[\d\.]+.*Safari/);
+					let iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+					let isLandscape = (this.reportedLandscape != undefined && this.reportedLandscape != null) ? this.reportedLandscape : ( this.isMobile ? ( resizeEvent == true && isSafari && iOS ? Math.abs(window.orientation) == 90 : Math.abs(window.orientation) == 90 ) : false );
+					return isLandscape;
+				}
+
+				setConfigProperty( propertyName, propertyValue, acceptNull ) {
+					if( !propertyName || propertyValue === undefined ) return;
+					if( !acceptNull && propertyValue == null ) return;
+					this[propertyName] = propertyValue;
+				}
+
+				calculateBoardSize( parentElement, canv, reportedLandscape, reportedSize ) {
+					let isLandscape = reportedLandscape ? reportedLandscape : this.isLandscape;
+					if( isLandscape ) {
+						this.canvasHeight = this.scaleFactor * (reportedSize ? reportedSize : ( this.isMobile ? parentElement.clientHeight * 0.95 : 568 ) ); //568(=44) +/- n*2*12
+						this.cellSize = (this.canvasHeight - 2*(this.scaleFactor-1) - 2*this.borderWidth - 2*this.lineWidth*this.yFieldSize)/(this.yFieldSize + 2*this.yMargin/100);
+					} else {
+						this.canvasWidth = this.scaleFactor * ( reportedSize ? reportedSize : ( this.isMobile ? parentElement.clientWidth * 0.95 : 552 ) ); //552(=44) +/- n*2*11
+						this.cellSize = (this.canvasWidth - 2*(this.scaleFactor-1) - 2*this.borderWidth - 2*this.lineWidth*this.xFieldSize)/(this.xFieldSize + 2*this.xMargin/100);
+					}
+
+					this.xMarginAmount = Math.round( this.xMargin/100*this.cellSize );
+					this.yMarginAmount = Math.round( this.yMargin/100*this.cellSize );
+
+					if( isLandscape ) {
+						this.cellSize = (this.canvasHeight - 2*(this.scaleFactor-1) - 2*this.yMarginAmount - 2*this.borderWidth - 2*this.lineWidth*this.yFieldSize)/(this.yFieldSize);
+					} else {
+						this.cellSize = (this.canvasWidth - 2*(this.scaleFactor-1) - 2*this.xMarginAmount - 2*this.borderWidth - 2*this.lineWidth*this.xFieldSize)/(this.xFieldSize);
+					}
+
+					this.fullCellSize = this.cellSize + 2*this.lineWidth;
+
+					this.headerPaddingAmount = Math.round( this.headerPadding*this.cellSize/100 );
+					this.headerTextPaddingXAmount = Math.round( this.headerTextPaddingX*this.cellSize/100 );
+					this.headerTextPaddingYAmount = Math.round( this.headerTextPaddingY*this.cellSize/100 );
+					this.headerTextFontSizeAmount = Math.round( this.cellSize * this.headerTextFontSize / 100 );
+					this.headerTextFontSizePadding = Math.round( this.headerTextFontSize * -0.1 );
+
+					if( isLandscape ) {
+						this.xFieldPos = this.borderWidth + this.xMarginAmount + 3*this.fullCellSize + this.headerPaddingAmount;
+						this.canvasWidth = 2*this.borderWidth + 2*(this.scaleFactor-1) + 2*this.xMarginAmount + this.fullCellSize*(this.xFieldSize) + 3*this.fullCellSize + this.headerPaddingAmount;
+						this.yFieldPos = this.borderWidth + this.yMarginAmount;
+					} else {
+						this.xFieldPos = this.borderWidth + this.xMarginAmount;
+						this.canvasHeight = 2*this.borderWidth + 2*(this.scaleFactor-1) + 2*this.yMarginAmount + this.fullCellSize*(this.yFieldSize + 1) + this.headerPaddingAmount + this.headerTextPaddingYAmount + this.headerTextFontSizePadding + this.headerTextFontSizeAmount;
+						this.yFieldPos = this.canvasHeight - 2*(this.scaleFactor-1) - this.borderWidth - this.yMarginAmount - this.fullCellSize*this.yFieldSize;
+					}
+
+					this.ballSize = Math.round( (this.cellSize * this.existingBallsSize / 100)/2 );
+					if( this.ballSize <= 0 || this.ballSize > this.cellSize - this.lineWidth ) this.ballSize = ( this.cellSize - this.lineWidth )/2;
+
+					this.nextBallSize = Math.round( ( this.cellSize * this.nextBallsSize / 100)/2 );
+					if( this.nextBallSize <= 0 || this.nextBallSize > this.cellSize - this.lineWidth ) this.nextBallSize = 0.5*(this.cellSize - this.lineWidth)/2;
+
+					this.newBallSize = Math.round( ( this.cellSize * this.newBallsSize / 100)/2 );
+					if( this.newBallSize <= 0 || this.newBallSize > this.cellSize - this.lineWidth ) this.newBallSize = 0.5*(this.cellSize - this.lineWidth)/2;
+
+					this.nextBallCellSize = 2*(this.nextBallSize + this.lineWidth);
+
+					canv.style.width = this.canvasWidth / this.scaleFactor + 'px';
+					canv.style.height = this.canvasHeight / this.scaleFactor + 'px';
+					canv.width = this.canvasWidth;
+					canv.height = this.canvasHeight;
+				}
+			}
+
+			class Cache {
+				constructor() {
+					this.ballDataCache = new Map();
+					this.halfPi = Math.PI/2;
+					this.twoPi = 2 * Math.PI;
+				}
+
+				precacheGraphics( game ) {
+					this.ballsRenderCanvas = document.createElement('canvas');
+					this.ballsRenderCanvas.width = game.settings.colors.length * 2*(game.settings.ballSize + 2);
+					this.ballsRenderCanvas.height = 2*(game.settings.ballSize + 1);
+					let ballsRenderCtx = this.ballsRenderCanvas.getContext('2d');
+					for( let colorIndex = 0; colorIndex < game.settings.colors.length; colorIndex++ ) {
+						let pointOverride = new Point( colorIndex*(2*game.settings.ballSize + 2) + game.settings.ballSize + 1, game.settings.ballSize + 1 );
+						let radOverride = game.settings.ballSize;
+						let ball = new Ball( game.settings, new Point( 0, 0 ), game.settings.ballSize );
+						ball.rad = radOverride;
+						ball.colorIndex = colorIndex;
+						game.drawBall( ball, pointOverride, radOverride, ballsRenderCtx, null );
+					}
+					this.nextBallsRenderCanvas = document.createElement('canvas');
+					this.nextBallsRenderCanvas.width = game.settings.colors.length * 2*(game.settings.nextBallSize + 2);
+					this.nextBallsRenderCanvas.height = 2*(game.settings.nextBallSize+1);
+					let nextBallsRenderCtx = this.nextBallsRenderCanvas.getContext('2d');
+					for( let colorIndex = 0; colorIndex < game.settings.colors.length; colorIndex++ ) {
+						let pointOverride = new Point( colorIndex*(2*game.settings.nextBallSize + 2) + game.settings.nextBallSize + 1, game.settings.nextBallSize + 1 );
+						let radOverride = game.settings.nextBallSize;
+						let ball = new Ball( game.settings, new Point( 0, 0 ), game.settings.nextBallSize );
+						ball.rad = radOverride;
+						ball.colorIndex = colorIndex;
+						game.drawBall( ball, pointOverride, radOverride, nextBallsRenderCtx, null );
+					}
+				}
+			}
+
+			class UndoSnapshot {
+				constructor( data ) {
+					this.boardScore = data.boardScore;
+					this.field = [];
+					for( let y=0; y<data.field.length; y++ ) {
+						const row = data.field[y];
+						let newRow = [];
+						for( let x=0; x<row.length; x++ ) {
+							newRow.push( row[x].clone() );
+						}
+						this.field.push( newRow );
+					}
+					this.nextBalls = [];
+					for( let x=0; x<data.nextBalls.length; x++ ) {
+						this.nextBalls.push( [] );
+						let ballColumn = data.nextBalls[x];
+						for( let y=0; y<ballColumn.length; y++ ) {
+							this.nextBalls[x].push( data.nextBalls[x][y].clone() );
+						}
+					}
+				}
+			}
+
+			class Point {
+				constructor( x, y ) {
+					this.x = x;
+					this.y = y;
+				}
+
+				clone() {
+					let clonedPoint = new Point();
+					clonedPoint.x = this.x;
+					clonedPoint.y = this.y;
+					return clonedPoint;
+				}
+			}
+
+			class Ball {
+				constructor( settings, pos, rad ) {
+					if( settings ) {
+						this.pos = pos;
+						this.rad = rad;
+						this.colorIndex = Math.floor(Math.random()*settings.colors.length);
+						this.colorAnim = null;
+						this.colorAlpha = null;
+					}
+				}
+
+				clone() {
+					let clonedBall = new Ball();
+					clonedBall.pos = this.pos != null ? this.pos.clone() : null;
+					clonedBall.rad = this.rad;
+					clonedBall.colorIndex = this.colorIndex;
+					clonedBall.colorAnim = this.colorAnim;
+					clonedBall.colorAlpha = this.colorAlpha;
+					return clonedBall;
+				}
+			}
+
+			class Cell {
+				constructor( pos, ball ) {
+					this.pos = pos;
+					if( ball ) {
+						this.ball = ball;
+					} else {
+						this.ball = null;
+					}
+				}
+
+				clone() {
+					let clonedCell = new Cell();
+					clonedCell.pos = this.pos != null ? this.pos.clone() : null;
+					clonedCell.ball = this.ball != null ? this.ball.clone() : null;
+					return clonedCell;
+				}
+
+				static sameCell( cell1, cell2 ) {
+					return cell1 != null && cell2 != null && this.samePoint( cell1.pos, cell2.pos );
+				}
+
+				static samePoint( point1, point2 ) {
+					return point1 != null && point2 != null && point1.x == point2.x && point1.y == point2.y;
+				}
+			}
+
+			class Sounds {
+				constructor() {
+					this.sound_pop = 'data:audio/mpeg;base64,/+NAxAAAAAAAAAAAAFhpbmcAAAAPAAAABAAABK8AUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQr6+vr6+vr6+vr6+vr6+vr6+vr6+vr6+vr/Ly8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vL/////////////////////////////////AAAAPExBTUUzLjEwMAQ3AAAAAAAAAAAVCCQDACEAAcwAAASvFVqRDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/jYMQAEhCqbB9MYAAxG2P1f6wwMFnTN169fY4MFBLAAA4iOzM//SWBARIl6+xw4VwIAcPIV68CAmD7/OCd/6wf+CH/5cP9/Kf/8H/wQ///5cH34IOVAjGHA3AwDADve71blctiZBm0ogtGvAG1RNGMMQMAFElZapx31CowKnZcka8DXwuJmXCBpZ25MBBYNdl+EOppIGbQVG4s4IfS8qWgiERQHaxDkDkAaBuMzYeEh+5PmTKZ00i1xxqYwgDZhUtYqSaTA7OWBK8bqxGET8mUc1Atxzp2DGUKottblzmQPKGlKAwC+jvwAzRGKGJ/b/tdd2FwNFK7etu5DzOnATswA6TconDmcqvwFNNzdh19tLfzCGLssdedd+pDDqQI/kPUk3BdHNymtUhqlwnH/gGXVKKMRaBMYVf/43DE41IUFnL/mtgAXXf227GdDH23d17nIsXJfK7Ujkb7SWlgnL8KteM2pc7sZpbtWUXJqTYxjOzSyuH71DF5Q7FivRw3TOpZjcXxlGNuvGrvYGiF6J5Q9f5ugnZbTxi7I4zOVq9yzhlWwylm7vNY61fVvMscyiUhllijMgaLJjOBEwg9PJGUKYBcWVULO3sXbEr0pzdVdyX11wGcvLHkMcccWbMDgdh7lEwkRCz23ZitUxBau4tSbGlEonijciay7sSf6NQezHUelkPuk/DIEFoTDdWz9XDKDZVDNmnrP3KIvDzJ6rx0P7lNWllP1Mo1nbp6GHpiGmaNdZZL7r0Jsv/p2sdZayiNWV2JZnXu1qGB9xSwwK8/lRm8hiLd2fP3QwxjWrU3dZbrU1N9uzclM1bpItT2asWuUmmuR+SUcj3RPg7kcdGhk8vd2tTfvHWUq///eOWP6wxr39VZzHuVu/ldvY8hlpdA7dau7//jUMT6RNP+Xl+bwAHKYTXkzxwxhnM55dhym7+5Tl39d1VpcZeilUxBTUVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/jEMTYAAAD/AHAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU=';
+					this.sound_poplarge = 'data:audio/mpeg;base64,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qRZeHz1+i1axSMNbRXBPRG6O0xnNbcFoOVzEhwtyimTgLuFCRRbuFN9AwgHTdHTP4jGx4asdrwyKQosy0Jn8GnhWrMV2uv203zZFUf/jMMTUHpGufxx6RpWFnwvAfv0/d9TYHQys6hZVT/1iljJ1QD9eJvr8fo47F/fd+ue8ddnYSOt+1XXaHHYJDaJVLI1GGzGxM9LwmtLCi8ymkpYtQuujnzPOcEQwHGIMBdXZYgCAO8Y8rVe/zZ4BHHoqK+zn+a6GuTAuC/Mi+OYBgAoHEHJCjvpdtSsVjxvb08HIlctb+mp4u1pjwf/jMMToIRIidx1PGAGkoVNKkUirixm4hh0KhnVCtniwnkddWVu4jC6ny+of7PBzTUFUOCg1hqbmZ65woOEPbU3Rhc4kFcOUDDVGhxm+kV9E8zHtHvYFJG1XwdOGMWgYixFK9gp5iV+IkbwLuceE8TisjwW+dnprcSI6Y4tKt1tP6X3JExLm9a67Bp9N9T1+PvUGFHpL1fHpEhqnbv/jUMTyPzQSbl+aeABR3+HNsbDoex1e/ROzaRiiOAJwBQPf78b3u/xGCISQ5ukB+qqa8ICogIgRkyXzrMNDgoGAawowBKbg4EGCwxUBHVG7u6h6kCqZDJFcHAAYl/rDPq0NK6LLL+MkQcLNCEx6BMyFxmcYUFWGWO1AyfBZo8EEp3Pp5y+xpOqnu89n6YcVn6GWLDRJhsIgScXbclWN+Rt0lv3YzBdZ3PlEajDtV3+lzkuTAEHwqIP03eUVnZdGxFeXK+Mzdnbn003Wm34hmci0Ncq1Oy2evSymq1Y5OWZLCalNGXpygGmqw8+LWmUuw12WQ9Eo1Ka0rosYxfsX4a7RxO9Gaf/jYMTtTlQWgx+byAAppVLdXWx4Rq9UiHw5WwiMYjcbjM12bllLjNZVr81flPw7HJ2m7x2ZyIzk/MyiV2pTyU36laVUlzKKxuGq8xHonOUNazbpqlPUsfP3lWREGBBgBBAhBAgHvAYSi2CKAuFSVjHC1+P4K6Sn41DqQBGf8LcLcS4lxLa/8cIlojMyKX/5eMyVODDDvEu//yWcyMzVEyN0v//0kx3DyMVD2JMkiaUTD///8YYzSJw8hxFIwLpOJccRuXf////5kktExSSSMjYxWapJOjnVTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/4zDE3x8jdlo1kmgAVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/4xDE2AAAA0gBwAAAVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
+					this.sound_undo = 'data:audio/mpeg;base64,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';
+					this.sound_gameover = 'data:audio/mpeg;base64,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';
+					this.sound_hiscore = 'data:audio/mpeg;base64,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';
+					this.sound_newgame = this.sound_gameover;
+				}
+
+				static playSound( game, soundFile ) {
+					if( !game.settings.playSound ) return;
+					if( !soundFile ) return;
+					let sound = new Audio( soundFile );
+					sound.play();
+				}
+			}
+
+			class Data {
+				constructor( settings ) {
+					this.gameResultsUpdated = false;
+					this.boardScore = 0;
+					this.boardBonus = 0;
+					this.field = this.initField( settings );
+					this.createFieldBalls( settings );
+					this.nextBalls = [];
+					this.createNextBalls( settings );
+					this.undoSnapshot = null; 
+					this.mousePos = null;
+					this.hoverCell = null;
+					this.hoverCells = [];
+					this.hoverCellPrev = null;
+					this.activeCell = null;
+					this.activeCells = [];
+					this.animations = new AnimationHandler( settings, this );
+				}
+
+				setUndoSnapshot() {
+					this.undoSnapshot = new UndoSnapshot( this );
+				}
+
+				resetUndoSnapshot( game ) {
+					if( this.undoSnapshot == null ) return;
+					this.boardScore = this.undoSnapshot.boardScore;
+					this.field = this.undoSnapshot.field;
+					this.nextBalls = this.undoSnapshot.nextBalls;
+					this.undoSnapshot = null;
+					Sounds.playSound( game, game.sounds.sound_undo );
+				}
+
+				initField( settings ) {
+					var field = [];
+					for( let y=0; y<settings.yFieldBallsSize; y++ ) {
+						let row = [];
+						for( let x=0; x<settings.xFieldSize; x++ ) {
+							row.push( new Cell( new Point(x,y) ) );
+						}
+						field.push( row );
+					}
+					return field;
+				}
+
+				createFieldBalls( settings ) {
+					let cells = [];
+					let balls = this.generateFieldBalls( settings );
+					for( const ballIndex in balls ) {
+						const ball = balls[ballIndex];
+						if( ball.pos.x == null || ball.pos.y == null ) continue;
+						ball.rad = settings.ballSize;
+						let cell = this.field[ball.pos.y][ball.pos.x];
+						cell.ball = ball;
+						cells.push( cell );
+					}
+					return cells;
+				}
+
+				createNextBalls( settings ) {
+					let columnsToAdd = settings.xFieldSize - this.nextBalls.length;
+					for( let x = 0; x < columnsToAdd; x++ ) {
+						let nextBalls = this.generateNextBalls( settings );
+						this.nextBalls.splice( 0, 0, nextBalls );
+					}
+				}
+
+				generateFieldBalls( settings ) {
+					let balls = [];
+					for( let x=0; x<settings.xFieldSize; x++ ) {
+						for( let y=0; y<settings.yFieldBallsSize; y++ ) {
+							balls.push( new Ball( settings, new Point( x, y ), settings.ballSize ) );
+						}
+					}
+					return balls;
+				}
+
+				generateNextBalls( settings ) {
+					let balls = [];
+					let maxNumberOfBalls = Math.floor( Math.random() * settings.xFieldSize ) + 1;
+					for( let x=0; x < maxNumberOfBalls; x++ ) {
+						balls.push( new Ball( settings, new Point( 0, 0 ), settings.nextBallSize ) );
+					}
+					return balls;
+				}
+
+				resetBallRadiuses( settings ) {
+					for( let y=0; y<this.field.length; y++ ) {
+						const row = this.field[y];
+						for( let x=0; x<row.length; x++ ) {
+							let cell = row[x];
+							if( cell.ball == null ) continue;
+							cell.ball.rad = settings.ballSize;
+						}
+					}
+					for( const nextBallsIndex in this.nextBalls ) {
+						let nextBalls = this.nextBalls[nextBallsIndex];
+						for( const nextBallIndex in nextBalls ) {
+							nextBalls[nextBallIndex].rad = settings.nextBallSize;
+						}
+					}
+					if( this.undoSnapshot != null ) {
+						for( let y=0; y<this.undoSnapshot.field.length; y++ ) {
+							const row = this.undoSnapshot.field[y];
+							for( let x=0; x<row.length; x++ ) {
+								let cell = row[x];
+								if( cell.ball == null ) continue;
+								cell.ball.rad = settings.ballSize;
+							}
+						}
+						for( const nextBallsIndex in this.undoSnapshot.nextBalls ) {
+							let nextBalls = this.undoSnapshot.nextBalls[nextBallsIndex];
+							for( const nextBallIndex in nextBalls ) {
+								nextBalls[nextBallIndex].rad = settings.nextBallSize;
+							}
+						}
+					}
+				}
+
+				addScore( settings, numberOfBalls ) {
+					this.boardScore += this.getMoveScore( settings, numberOfBalls );
+				}
+
+				getMoveScore( settings, numberOfBalls ) {
+					return ( numberOfBalls - 1 ) * numberOfBalls;
+				}
+
+				getTotalScore() {
+					return this.boardScore + this.boardBonus;
+				}
+			}
+
+			class AnimationHandler {
+				constructor( settings ) {
+					this.animationRunning = false;
+					this.animations = [];
+					this.resetAnimations( settings );
+				}
+
+				start( game ) {
+					if( !game.endGame ) {
+						game.data.setUndoSnapshot();
+						game.data.addScore( game.settings, game.data.activeCells.length );
+					}
+					this.animationRunning = true;
+					this.animations[0].init( game );
+					this.animations[0].start();
+				}
+
+				preDrawProcess( game ) {
+					if( !this.animationRunning ) return;
+					let animation = this.getCurrentAnimation();
+					if( animation == null ) {
+						animation = this.getNextAnimation();
+						if( animation == null ) {
+							this.resetAnimations( game.settings );
+							game.data.activeCells = [];
+							game.data.activeCell = null;
+							game.data.hoverCells = [];
+							game.data.hoverCell = null;
+							game.setHoverCell();
+							return;
+						}
+					}
+				}
+
+				postDrawProcess( game ) {
+					if( !this.animationRunning ) return;
+					let animation = this.getCurrentAnimation();
+					if( animation == null ) {
+						animation = this.getNextAnimation();
+						if( animation != null ) {
+							animation.init( game );
+							animation.start();
+						}
+					}
+					animation.process( game );
+					game.requestAction( 'animation', null, game.canv.id );
+				}
+
+				animationInProgress() {
+					return this.animationRunning;
+				}
+
+				getCurrentAnimation() {
+					for( const animationIndex in this.animations ) {
+						const animation = this.animations[animationIndex];
+						if( !animation.animationInProgress ) continue;
+						return animation;
+					}
+					return null;
+				}
+
+				getNextAnimation() {
+					for( const animationIndex in this.animations ) {
+						const animation = this.animations[animationIndex];
+						if( animation.animationComplete ) continue;
+						return animation;
+					}
+					return null;
+				}
+
+				resetAnimations( settings ) {
+					this.animationRunning = false;
+					this.animations = [];
+					this.animations.push( new DeleteBallsAnimation() );        //standard continuous shifter megashift
+					this.animations.push( new MoveBallsDownAnimation() );      //standard continuous shifter megashift
+					if( settings.gameModeIndex == 1 || settings.gameModeIndex == 2 ) {
+						this.animations.push( new MoveColsRightAnimation() );  //standard continuous                  
+					}
+					if( settings.gameModeIndex == 3 || settings.gameModeIndex == 4 ) {
+						this.animations.push( new MoveBallsRightAnimation() ); //                    shifter megashift
+					}
+					if( settings.gameModeIndex == 2 || settings.gameModeIndex == 4 ) {
+						this.animations.push( new SpawnBallsAnimation() );     //         continuous         megashift
+					}
+					if( settings.gameModeIndex == 4 ) {
+						this.animations.push( new MoveBallsRightAnimation() ); //                            megashift
+					}
+				}
+			}
+
+			class Animation {
+				constructor() {
+					if( this.init === undefined ) {
+						throw new TypeError('Animation inheritance must override "init" method');
+					}
+					if( this.process === undefined ) {
+						throw new TypeError('Animation inheritance must override "process" method');
+					}
+					this.animationStartTime = 0;
+					this.animationInProgress = false;
+					this.animationComplete = false;
+				}
+
+				start() {
+					this.animationStartTime = performance.now();
+					this.animationInProgress = true;
+				}
+
+				end() {
+					this.animationInProgress = false;
+					this.animationComplete = true;
+				}
+
+			}
+
+			class DeleteBallsAnimation extends Animation {
+				constructor() {
+					super();
+					this.animatedCells = [];
+				}
+
+				init( game ) {
+					for( const cellIndex in game.data.activeCells ) {
+						let cell = game.data.activeCells[cellIndex];
+						let cellClone = cell.clone();
+						this.animatedCells.push( cellClone );
+						game.data.field[cell.pos.y][cell.pos.x].ball = null;
+					}
+					if( game.data.activeCells.length < 10 ) {
+						Sounds.playSound( game, game.sounds.sound_pop );
+					} else {
+						Sounds.playSound( game, game.sounds.sound_poplarge );
+					}
+				}
+
+				process( game ) {
+					const animationTimeElapsed = Math.max( 0, game.animationCurrentTime - this.animationStartTime );
+					const animationTotalLength = game.settings.deleteAnimationLength;
+					if( animationTimeElapsed >= animationTotalLength ) {
+						super.end();
+						return;
+					}
+					const animationPercentage = animationTimeElapsed / animationTotalLength;
+					for( const cellIndex in this.animatedCells ) {
+						const ball = this.animatedCells[cellIndex].ball;
+						ball.rad = game.settings.ballSize + ( 0.65 * game.settings.ballSize ) * animationPercentage;
+						let ballColors = game.hexToRgb( game.settings.colors[ball.colorIndex].ballColor );
+						const colorPercentage = Math.pow( animationPercentage, 2 );
+						ballColors.r = Math.floor( ballColors.r + ( 255 - ballColors.r ) * colorPercentage );
+						ballColors.g = Math.floor( ballColors.g + ( 255 - ballColors.g ) * colorPercentage );
+						ballColors.b = Math.floor( ballColors.b + ( 255 - ballColors.b ) * colorPercentage );
+						ballColors.a = 1 - Math.pow( animationPercentage, 3 );
+						ball.colorAnim = game.rgbToHex( ballColors );
+						ball.colorAlpha = ballColors.a;
+						game.drawBall( ball, undefined, undefined, game.ctx, null );
+					}
+				}
+			}
+
+			class MoveBallsDownAnimation extends Animation {
+				constructor() {
+					super();
+					this.animatedCells = [];
+					this.animationLength = 0;
+				}
+
+				init( game ) {
+					const fieldHeight = game.data.field.length-1;
+					for( let y = fieldHeight; y >= 0; y-- ) {
+						let row = game.data.field[y];
+						for( let x = 0; x < row.length; x++ ) {
+							if( y == fieldHeight ) this.animatedCells.push( [] );
+							if( y-1 < 0 ) continue;
+							let cell = row[x];
+							if( cell.ball != null ) continue;
+							if( this.animatedCells[x].length == 0 ) {
+								for( let cellIndex = 0; cellIndex < y; cellIndex++ ) {
+									let cellAbove = game.data.field[cellIndex][x];
+									let cellAboveClone = cellAbove.clone();
+									if( cellAbove.ball == null ) continue;
+									let animatedCellObj = { cell: cellAboveClone, path: 0 };
+									this.animatedCells[x].push( animatedCellObj );
+								}
+							}
+							for( let cellIndex = 0; cellIndex < this.animatedCells[x].length; cellIndex++ ) {
+								let animatedCellObj = this.animatedCells[x][cellIndex];
+								if( animatedCellObj.cell.pos.y >= y ) continue;
+								animatedCellObj.path++;
+								this.animationLength = Math.max( this.animationLength, animatedCellObj.path );
+							}
+						}
+					}
+					for( let x = 0; x < this.animatedCells.length; x++ ) {
+						let animatedColumn = this.animatedCells[x];
+						for( let y = 0; y < animatedColumn.length; y++ ) {
+							let cell = this.animatedCells[x][y].cell;
+							game.data.field[cell.pos.y][cell.pos.x].ball = null;
+						}
+					}
+				}
+
+				process( game ) {
+					if( this.animationLength == 0 ) {
+						super.end();
+						return;
+					}
+					const animationTimeElapsed = Math.max( 0, game.animationCurrentTime - this.animationStartTime );
+					const animationTotalLength = game.settings.constantAnimationLength ? game.settings.moveDownAnimationLengthConstantPerCell * this.animationLength : game.settings.moveDownAnimationLength;
+					if( animationTimeElapsed >= animationTotalLength ) {
+						this.finish( game );
+						for( const x in this.animatedCells ) {
+							let animatedColumn = this.animatedCells[x];
+							for( const y in animatedColumn ) {
+								game.drawBall( animatedColumn[y].cell.ball, undefined, undefined, game.ctx, game.cache.ballsRenderCanvas );
+							}
+						}
+						super.end();
+						return;
+					} else {
+						const animationPercentage = animationTimeElapsed / animationTotalLength;
+						for( const x in this.animatedCells ) {
+							let animatedColumn = this.animatedCells[x];
+							for( const y in animatedColumn ) {
+								let animatedCell = animatedColumn[y].cell;
+								let animatedBall = animatedCell.ball;
+								if( animationPercentage > animatedColumn[y].path / this.animationLength ) {
+									animatedBall.pos.y = animatedCell.pos.y + animatedColumn[y].path;
+								} else {
+									animatedBall.pos.y = animatedCell.pos.y + animationPercentage * this.animationLength;
+								}
+								game.drawBall( animatedBall, undefined, undefined, game.ctx, game.cache.ballsRenderCanvas );
+							}
+						}
+					}
+				}
+
+				finish( game ) {
+					for( const x in this.animatedCells ) {
+						let animatedColumn = this.animatedCells[x];
+						if( animatedColumn.length == 0 ) continue;
+						for( let y = animatedColumn.length-1; y >= 0; y-- ) {
+							let animatedCellObj = animatedColumn[y];
+							let animatedCell = animatedCellObj.cell;
+							let animatedBall = animatedCell.ball;
+							game.data.field[animatedCell.pos.y][animatedCell.pos.x].ball = null;
+							let newCellIndex = animatedCell.pos.y + animatedCellObj.path;
+							animatedBall.pos.y = newCellIndex;
+							game.data.field[newCellIndex][animatedCell.pos.x].ball = animatedBall;
+						}
+					}
+				}
+			}
+
+			class MoveColsRightAnimation extends Animation {
+				constructor() {
+					super();
+					this.animatedCells = [];
+					this.animationLength = 0;
+				}
+
+				init( game ) {
+					let emptyBallsPerColumn = [];
+					for( let y = 0; y < game.data.field.length; y++ ) {
+						let row = game.data.field[y];
+						for( let x = 0; x < row.length; x++ ) {
+							if( y == 0 ) {
+								emptyBallsPerColumn.push( 0 );
+								this.animatedCells.push( [] );
+							}
+							let cell = row[x];
+							if( cell.ball != null ) continue;
+							emptyBallsPerColumn[x]++;
+						}
+					}
+
+					let dataInitialized = false;
+					for( let columnIndex = emptyBallsPerColumn.length-1; columnIndex >= 0; columnIndex-- ) {
+						if( emptyBallsPerColumn[columnIndex] < game.settings.yFieldBallsSize ) continue;
+						if( !dataInitialized ) {
+							dataInitialized = true;
+							for( let y = 0; y < game.data.field.length; y++ ) {
+								let row = game.data.field[y];
+								for( let x = 0; x < columnIndex; x++ ) {
+									let cell = row[x];
+									if( cell.ball == null ) continue;
+									let clonedCell = cell.clone();
+									let animatedCellObj = { cell: clonedCell, path: 0 };
+									this.animatedCells[x].push( animatedCellObj );
+								}
+							}
+						}
+						for( let x = 0; x <= columnIndex; x++ ) {
+							for( const cellIndex in this.animatedCells[x] ) {
+								let animatedCellObj = this.animatedCells[x][cellIndex];
+								let cell = animatedCellObj.cell;
+								game.data.field[cell.pos.y][cell.pos.x].ball = null;
+								animatedCellObj.path++;
+								this.animationLength = Math.max( this.animationLength, animatedCellObj.path );
+							}
+						}
+					}
+				}
+
+				process( game ) {
+					if( this.animationLength == 0 ) {
+						super.end();
+						return;
+					}
+					const animationTimeElapsed = Math.max( 0, game.animationCurrentTime - this.animationStartTime );
+					const animationTotalLength = game.settings.constantAnimationLength ? game.settings.moveRightAnimationLengthConstantPerCell * this.animationLength : game.settings.moveRightAnimationLength;
+					if( animationTimeElapsed >= animationTotalLength ) {
+						this.finish( game );
+						for( const x in this.animatedCells ) {
+							let animatedColumn = this.animatedCells[x];
+							for( const y in animatedColumn ) {
+								game.drawBall( animatedColumn[y].cell.ball, undefined, undefined, game.ctx, game.cache.ballsRenderCanvas );
+							}
+						}
+						super.end();
+					} else {
+						const animationPercentage = Math.pow( animationTimeElapsed / animationTotalLength, 2 );
+						for( const x in this.animatedCells ) {
+							let animatedColumn = this.animatedCells[x];
+							for( const y in animatedColumn ) {
+								let animatedCell = animatedColumn[y].cell;
+								let animatedBall = animatedCell.ball;
+								if( animationPercentage > animatedColumn[y].path / this.animationLength ) {
+									animatedBall.pos.x += animatedColumn[y].path;
+								} else {
+									animatedBall.pos.x = animatedCell.pos.x + animationPercentage * this.animationLength;
+								}
+								game.drawBall( animatedBall, undefined, undefined, game.ctx, game.cache.ballsRenderCanvas );
+							}
+						}
+					}
+				}
+
+				finish( game ) {
+					for( let x = this.animatedCells.length-1; x >= 0; x-- ) {
+						let animatedColumn = this.animatedCells[x];
+						if( animatedColumn.length == 0 ) continue;
+						for( let y = 0; y < animatedColumn.length; y++ ) {
+							let animatedCellObj = animatedColumn[y];
+							let animatedCell = animatedCellObj.cell;
+							let animatedBall = animatedCell.ball;
+							game.data.field[animatedCell.pos.y][animatedCell.pos.x].ball = null;
+							let newCellIndex = animatedCell.pos.x + animatedCellObj.path;
+							animatedBall.pos.x = newCellIndex;
+							game.data.field[animatedCell.pos.y][newCellIndex].ball = animatedBall;
+						}
+					}
+				}
+			}
+
+			class MoveBallsRightAnimation extends Animation {
+				constructor() {
+					super();
+					this.animatedCells = [];
+					this.animationLength = 0;
+				}
+
+				init( game ) {
+					for( let y = 0; y <  game.data.field.length; y++ ) {
+						let row = game.data.field[y];
+						let fieldWidth = row.length-1;
+						for( let x = fieldWidth; x >= 0; x-- ) {
+							if( x == fieldWidth ) this.animatedCells.push( [] );
+							if( x-1 < 0 ) continue;
+							let cell = row[x];
+							if( cell.ball != null ) continue;
+							if( this.animatedCells[y].length == 0 ) {
+								for( let cellIndex = 0; cellIndex < x; cellIndex++ ) {
+									let cellToLeft = game.data.field[y][cellIndex];
+									let cellToLeftClone = cellToLeft.clone();
+									if( cellToLeft.ball == null ) continue;
+									let animatedCellObj = { cell: cellToLeftClone, path: 0 };
+									this.animatedCells[y].push( animatedCellObj );
+								}
+							}
+							for( let cellIndex = 0; cellIndex < this.animatedCells[y].length; cellIndex++ ) {
+								let animatedCellObj = this.animatedCells[y][cellIndex];
+								if( animatedCellObj.cell.pos.x >= x ) continue;
+								animatedCellObj.path++;
+								this.animationLength = Math.max( this.animationLength, animatedCellObj.path );
+							}
+						}
+					}
+					for( let x = 0; x < this.animatedCells.length; x++ ) {
+						let animatedRow = this.animatedCells[x];
+						for( let y = 0; y < animatedRow.length; y++ ) {
+							let cell = this.animatedCells[x][y].cell;
+							game.data.field[cell.pos.y][cell.pos.x].ball = null;
+						}
+					}
+				}
+
+				process( game ) {
+					if( this.animationLength == 0 ) {
+						super.end();
+						return;
+					}
+					const animationTimeElapsed = Math.max( 0, game.animationCurrentTime - this.animationStartTime );
+					const animationTotalLength = game.settings.constantAnimationLength ? game.settings.moveRightAnimationLengthConstantPerCell * this.animationLength : game.settings.moveRightAnimationLength;
+					if( animationTimeElapsed >= animationTotalLength ) {
+						this.finish( game );
+						for( const y in this.animatedCells ) {
+							let animatedRow = this.animatedCells[y];
+							for( const x in animatedRow ) {
+								game.drawBall( animatedRow[x].cell.ball, undefined, undefined, game.ctx, game.cache.ballsRenderCanvas );
+							}
+						}
+						super.end();
+						return;
+					} else {
+						const animationPercentage = animationTimeElapsed / animationTotalLength;
+						for( const y in this.animatedCells ) {
+							let animatedRow = this.animatedCells[y];
+							for( const x in animatedRow ) {
+								let animatedCell = animatedRow[x].cell;
+								let animatedBall = animatedCell.ball;
+								if( animationPercentage > animatedRow[x].path / this.animationLength ) {
+									animatedBall.pos.x = animatedCell.pos.x + animatedRow[x].path;
+								} else {
+									animatedBall.pos.x = animatedCell.pos.x + animationPercentage * this.animationLength;
+								}
+								game.drawBall( animatedBall, undefined, undefined, game.ctx, game.cache.ballsRenderCanvas );
+							}
+						}
+					}
+				}
+
+				finish( game ) {
+					for( const y in this.animatedCells ) {
+						let animatedRow = this.animatedCells[y];
+						if( animatedRow.length == 0 ) continue;
+						for( let x = animatedRow.length-1; x >= 0; x-- ) {
+							let animatedCellObj = animatedRow[x];
+							let animatedCell = animatedCellObj.cell;
+							let animatedBall = animatedCell.ball;
+							game.data.field[animatedCell.pos.y][animatedCell.pos.x].ball = null;
+							let newCellIndex = animatedCell.pos.x + animatedCellObj.path;
+							animatedBall.pos.x = newCellIndex;
+							game.data.field[animatedCell.pos.y][newCellIndex].ball = animatedBall;
+						}
+					}
+				}
+			}
+
+			class SpawnBallsAnimation extends Animation {
+				constructor() {
+					super();
+					this.animatedCells = [];
+					this.animationLength = 0;
+				}
+
+				init( game ) {
+					let emptyBallsPerColumn = [];
+					for( let y = 0; y < game.data.field.length; y++ ) {
+						let row = game.data.field[y];
+						for( let x = 0; x < row.length; x++ ) {
+							if( y == 0 ) {
+								emptyBallsPerColumn.push( 0 );
+								this.animatedCells.push( [] );
+							}
+							let cell = row[x];
+							if( cell.ball != null ) continue;
+							emptyBallsPerColumn[x]++;
+						}
+					}
+
+					for( let columnIndex = emptyBallsPerColumn.length-1; columnIndex >= 0; columnIndex-- ) {
+						if( emptyBallsPerColumn[columnIndex] < game.settings.yFieldBallsSize ) continue;
+						this.animationLength = 1;
+						let nextBalls = game.data.nextBalls[game.data.nextBalls.length-1];
+						for( let nextBallIndex = 0; nextBallIndex < nextBalls.length; nextBallIndex++ ) {
+							let nextBall = nextBalls[nextBallIndex];
+							let cell = game.data.field[game.settings.yFieldBallsSize-1-nextBallIndex][columnIndex];
+							let clonedCell = cell.clone();
+							clonedCell.ball = nextBall;
+							nextBall.rad = game.settings.newBallSize;
+							nextBall.pos = clonedCell.pos;
+							this.animatedCells[columnIndex].push( clonedCell );
+						}
+						game.data.nextBalls.splice( game.data.nextBalls.length-1, 1 );
+					}
+					game.data.createNextBalls( game.settings );
+				}
+
+				process( game ) {
+					if( this.animationLength == 0 ) {
+						super.end();
+						return;
+					}
+					const animationTimeElapsed = Math.max( 0, game.animationCurrentTime - this.animationStartTime );
+					const animationTotalLength = game.settings.spawnAnimationLength;
+					if( animationTimeElapsed >= animationTotalLength ) {
+						this.finish( game );
+						for( let x = 0; x < this.animatedCells.length; x++ ) {
+							let animatedCell = this.animatedCells[x];
+							for( let y = 0; y < animatedCell.length; y++ ) {
+								game.drawBall( animatedCell[y].ball, undefined, undefined, game.ctx, game.cache.ballsRenderCanvas );
+							}
+						}
+						super.end();
+					} else {
+						const animationPercentage = Math.pow( animationTimeElapsed / animationTotalLength, 2 );
+						for( let x = 0; x < this.animatedCells.length; x++ ) {
+							let animatedCell = this.animatedCells[x];
+							for( let y = 0; y < animatedCell.length; y++ ) {
+								let animatedBall = animatedCell[y].ball;
+								animatedBall.rad = game.settings.newBallSize + animationPercentage * ( game.settings.ballSize - game.settings.newBallSize );
+								game.drawBall( animatedBall, undefined, undefined, game.ctx, null );
+							}
+						}
+					}
+				}
+
+				finish( game ) {
+					for( let x = this.animatedCells.length-1; x >= 0; x-- ) {
+						let animatedColumn = this.animatedCells[x];
+						if( animatedColumn.length == 0 ) continue;
+						for( let y = 0; y < animatedColumn.length; y++ ) {
+							let animatedCell = animatedColumn[y];
+							let animatedBall = animatedCell.ball;
+							animatedBall.rad = game.settings.ballSize;
+							game.data.field[animatedCell.pos.y][animatedCell.pos.x].ball = animatedBall;
+						}
+					}
+				}
+			}
+
+			class GameJawbreaker {
+				constructor( elementId, canvasId, params ) {
+					this.cookieName = 'jawbreaker_cookie';
+					this.initTopScores();
+					if( gameJawbreakerInstances === undefined ) gameJawbreakerInstances = new Map();
+
+					if( canvasId === undefined || canvasId == null ) canvasId = 'gameJawbreakerInstance_' + (Object.keys(gameJawbreakerInstances).length + 1);
+					this.parentElement = null;
+					if( elementId !== undefined && elementId != null ) {
+						this.parentElement = document.getElementById( elementId );
+					}
+					if( this.parentElement === undefined || this.parentElement == null ) {
+						this.parentElement = document.body;
+					}
+
+					this.canv = document.createElement( 'canvas' );
+					this.canv.id = canvasId;
+					this.parentElement.appendChild( this.canv );
+					this.ctx = this.canv.getContext("2d");
+					this.ctx.scale(2,2);
+
+					this.settings = new Settings( this.parentElement, this.canv, params );
+
+					this.cache = new Cache();
+					this.cache.precacheGraphics( this );
+
+					this.sounds = new Sounds();
+
+					this.newGame();
+
+					this.animationCurrentTime = 0;
+					this.requestAnimationReference = null;
+
+					gameJawbreakerInstances[ canvasId ] = this;
+					
+					this.draw();
+
+					this.canv.addEventListener( 'mouseup',   function mouseUpAction(event)   { GameJawbreaker.requestGameAction( 'mouseup',   event, canvasId ); }, false );
+					this.canv.addEventListener( 'mousemove', function mouseMoveAction(event) { GameJawbreaker.requestGameAction( 'mousemove', event, canvasId ); }, false );
+					if( this.settings.isMobile ) {
+						this.canv.addEventListener( 'orientationchange', function windowOrientationChangeAction(event) { GameJawbreaker.detectOrientationChange(); } );
+					}
+
+					this.readCookieData();
+
+					return this;
+				}
+
+				static detectOrientationChange() {
+					for( let gameInstanceIndex in gameJawbreakerInstances ) {
+						gameJawbreakerInstances[ gameInstanceIndex ].detectOrientationChange();
+					}
+				}
+
+				detectOrientationChange() {
+					let isLandscape = this.settings.isDeviceLandscape( true );
+					if( this.settings.isLandscape != isLandscape ) {
+						this.settings.isLandscape = isLandscape;
+						this.settings.calculateBoardSize( this.parentElement, this.canv );
+						this.cache = new Cache();
+						this.cache.precacheGraphics( this );
+						this.data.resetBallRadiuses( this.settings );
+						this.drawBoard();
+					}
+				}
+
+				static requestGameAction( action, event, canvasId ) {
+					event.stopPropagation();
+					event.stopImmediatePropagation();
+					event.preventDefault();
+					gameJawbreakerInstances[ canvasId ].requestAction( action, event, canvasId );
+					return false;
+				}
+
+				requestAction( action, event, canvasId ) {
+					this.requestAnimationReference = requestAnimationFrame( function responseAnimationFrame(timestamp) { GameJawbreaker.processGameAction( action, event, canvasId, timestamp ); } );
+				}
+
+				static processGameAction( action, event, canvasId, timestamp ) {
+					gameJawbreakerInstances[ canvasId ].processAction( action, event, timestamp );
+				}
+
+				processAction( action, event, timestamp ) {
+					this.animationCurrentTime = timestamp || new Date().getTime();
+					if( action == 'mouseup' ) {
+						this.mouseUp( event, timestamp );
+					} else if( action == 'mousemove' ) {
+						this.mouseMove( event, timestamp );
+					} else if( action == 'animation' ) {
+						this.gameTick( timestamp );
+					}
+				}
+
+				updateTopScores() {
+					let currentScore = this.data.getTotalScore();
+					let topScoresSorted = this.topScores[this.settings.gameModeIndex].sort( function(a, b) { return b - a; } );
+					let prevScoreValue = currentScore;
+					let isHiScore = false;
+					for( let topScoreIndex in topScoresSorted ) {
+						if( prevScoreValue >= topScoresSorted[topScoreIndex] ) {
+							isHiScore = true;
+							let currentScoreValue = topScoresSorted[topScoreIndex];
+							topScoresSorted[topScoreIndex] = prevScoreValue;
+							prevScoreValue = currentScoreValue;
+						}
+					}
+					this.topScores[this.settings.gameModeIndex] = topScoresSorted;
+					if( isHiScore ) {
+						Sounds.playSound( this, this.sounds.sound_hiscore );
+					} else {
+						Sounds.playSound( this, this.sounds.sound_gameover );
+					}
+				}
+
+				initTopScores() {
+					this.topScores = { 1: [ 0, 0, 0, 0, 0 ],
+									   2: [ 0, 0, 0, 0, 0 ],
+									   3: [ 0, 0, 0, 0, 0 ],
+									   4: [ 0, 0, 0, 0, 0 ] };
+				}
+
+				newGame() {
+					this.data = new Data( this.settings );
+					this.initGame = true;
+					this.endGame = false;
+				}
+
+				calculateGameScore() {
+					let boardBonus = 0;
+					let remainingBalls = 0;
+					for( let y=0; y<this.data.field.length; y++ ) {
+						let row = this.data.field[y];
+						for( let x=0; x<row.length; x++ ) {
+							let cell = row[x];
+							if( cell.ball == null ) continue;
+							remainingBalls++;
+						}
+					}
+					boardBonus = Math.max( 100 - remainingBalls * 20, 0 );
+					this.data.boardBonus = boardBonus;
+				}
+
+				calculateGameResults() {
+					if( !this.endGame ) return;
+					if( this.data.gameResultsUpdated ) return;
+					this.calculateGameScore();
+					this.updateTopScores();
+					this.setCookieData();
+					this.data.gameResultsUpdated = true;
+				}
+
+				readCookieData() {
+					let cookie = this.getCookie( this.cookieName );
+					if( cookie ) {
+						if( cookie === undefined || cookie == null ) return;
+						let values = JSON.parse( cookie );
+						if( values.topScores == null ) {
+							initTopScores();
+						} else {
+							this.topScores = values.topScores;
+						}
+					}
+				}
+				
+				setCookieData() {
+					let data = {
+						topScores: this.topScores
+					};
+					this.setCookie( this.cookieName, data, 365 );
+				}
+
+				getCookie( cookieName ) {
+					let nameEQ = cookieName + "=";
+					let ca = document.cookie.split(';');
+					for( let i = 0; i < ca.length; i++ ) {
+						let c = ca[i];
+						while( c.charAt(0) == ' ' ) c = c.substring( 1, c.length );
+						if( c.indexOf( nameEQ ) == 0 ) return c.substring( nameEQ.length, c.length );
+					}
+					return null;
+				}
+
+				setCookie( cookieName, data, days ) {
+					let expires = "";
+					if( !days ) days = 365;
+					if( !cookieName ) cookieName = this.cookieName + "_Default";
+					let date = new Date();
+					date.setTime( date.getTime() + ( days*24*60*60*1000 ) );
+					expires = "; expires=" + date.toUTCString();
+					document.cookie = cookieName + "=" + ( JSON.stringify( data ) || "")  + expires + "; path=/";
+				}
+
+				gameTick( timestamp ) {
+					if( !this.data.animations.animationInProgress() ) {
+						cancelAnimationFrame( this.requestAnimationReference );
+						return;
+					}
+					this.draw();
+				}
+
+				mouseMove( event, timestamp ) {
+					this.captureMousePosition( event );
+					if( this.data.animations.animationInProgress() ) return;
+					this.setHoverCell();
+					this.drawBoard();
+				}
+
+				mouseUp( event, timestamp ) {
+					if( this.data.animations.animationInProgress() ) return;
+					this.captureMousePosition( event );
+					this.setActiveCell();
+
+					if( this.isUndoEnabled() && this.isMouseHover( this.getUndoIconLocation() ) ) {
+						this.data.resetUndoSnapshot( this );
+					}
+					if( this.endGame && this.isMouseHover( this.getStartOverButtonLocation() ) ) {
+						this.newGame();
+						Sounds.playSound( this, this.sounds.sound_newgame );
+					}
+
+					this.draw();
+				}
+
+				setHoverCell( doSet ) {
+					let cell = this.getCell( this.data.mousePos );
+					if( doSet == false || cell == null ) {
+						this.data.hoverCellPrev = null;
+						this.data.hoverCell = null;
+						this.data.hoverCells = [];
+					} else if( cell != null ) {
+						this.data.hoverCell = cell;
+						//if( Cell.sameCell( this.data.hoverCell, this.data.hoverCellPrev ) ) return;
+						this.data.hoverCellPrev = this.data.hoverCell;
+						this.data.hoverCells = this.getCellsBlock( this.data.hoverCell );
+					}
+				}
+
+				setActiveCell() {
+					let cell = this.getCell( this.data.mousePos );
+					if( cell == null ) {
+						this.data.activeCell = null;
+						this.data.activeCells = [];
+					} else {
+						if( this.data.activeCell != null ) {
+							if( cell.ball == null ) {
+								this.data.activeCell = null;
+								this.data.activeCells = [];
+							} else {
+								if( this.sameBlock( cell, this.data.activeCells ) ) {
+									this.data.activeCell = cell;
+									this.data.animations.start( this );
+								} else {
+									this.data.activeCell = null;
+									this.data.activeCells = [];
+								}
+							}
+						} else {
+							if( cell.ball != null ) {
+								this.data.activeCell = cell;
+								this.data.activeCells = this.getCellsBlock( this.data.activeCell );
+								if( this.data.activeCells.length <= 1 ) {
+									this.data.activeCell = null;
+									this.data.activeCells = [];
+								}
+							}
+						}
+					}
+				}
+
+				sameBlock( referenceCell, cells ) {
+					for( const cellIndex in cells ) {
+						const cell = cells[cellIndex];
+						if( Cell.sameCell( referenceCell, cell ) ) return true;
+					}
+					return false;
+				}
+
+				getCellsBlock( cell ) {
+					let finder = new BlockFinder( cell, this.data.field );
+					return finder.getPath();
+				}
+
+				checkEndGame() {
+					if( this.endGame ) return this.endGame;
+					for( let y=0; y<this.data.field.length; y++ ) {
+						let row = this.data.field[y];
+						for( let x=0; x<row.length; x++ ) {
+							let cell = row[x];
+							if( cell.ball == null ) continue;
+							let pathCells = this.getCellsBlock( cell );
+							if( pathCells.length <= 1 ) continue;
+							this.endGame = false;
+							return this.endGame;
+						}
+					}
+					this.endGame = true;
+					return this.endGame;
+				}
+
+				draw() {
+					this.drawGameLogicPreDraw();
+					this.drawBoard();
+					this.drawGameLogicPostDraw();
+				}
+
+				drawBoard() {
+					this.ctx.clearRect(0, 0, this.canv.width, this.canv.height);
+					this.drawHeader();
+					this.drawField();
+					this.drawNextBalls();
+					this.drawCellHover();
+					this.drawCellActive();
+					this.drawBalls();
+					this.drawHint();
+					this.drawEndGame();
+				}
+
+				drawGameLogicPreDraw() {
+					if( this.endGame ) return;
+					this.data.animations.preDrawProcess( this );
+				}
+
+				drawGameLogicPostDraw() {
+					if( this.endGame ) return;
+					this.data.animations.postDrawProcess( this );
+					if( this.data.animations.animationInProgress() ) return;
+					if( !this.checkEndGame() ) return;
+					this.calculateGameResults();
+					this.drawBoard();
+				}
+
+				drawCellHover() {
+					if( this.endGame ) return;
+					if( this.settings.isMobile ) return;
+					if( this.data.hoverCell == null ) return;
+					if( this.data.animations.animationInProgress() ) return;
+					const ball = this.data.field[this.data.hoverCell.pos.y][this.data.hoverCell.pos.x].ball;
+					if( this.data.hoverCells.length > 1 ) {
+						const colorIndex = this.data.hoverCell.ball.colorIndex;
+						const colorConfig = this.settings.colors[colorIndex];
+						this.highlightCells( this.data.hoverCells, colorConfig.hoverColor, colorConfig.hoverColor, colorConfig.hoverBorderColor );
+					}
+				}
+
+				drawCellActive() {
+					if( this.endGame ) return;
+					if( this.data.activeCell == null ) return;
+					if( this.data.animations.animationInProgress() ) return;
+					if( this.data.activeCells.length > 1 ) {
+						const colorIndex = this.data.activeCell.ball.colorIndex;
+						const colorConfig = this.settings.colors[colorIndex];
+						this.highlightCells( this.data.activeCells, colorConfig.activeColor, colorConfig.activeColor, colorConfig.activeBorderColor );
+					}
+				}
+
+				drawHint() {
+					if( this.endGame ) return;
+					if( this.data.activeCell == null ) return;
+					if( this.data.animations.animationInProgress() ) return;
+					if( this.data.activeCells.length > 1 ) {
+						let topMostIndex = null;
+						for( const cellIndex in this.data.activeCells ) {
+							const cell = this.data.activeCells[cellIndex];
+							if( topMostIndex == null || cell.pos.y < topMostIndex ) topMostIndex = cell.pos.y;
+						}
+						let leftMostIndex = null;
+						for( const cellIndex in this.data.activeCells ) {
+							const cell = this.data.activeCells[cellIndex];
+							if( cell.pos.y == topMostIndex && ( leftMostIndex == null || cell.pos.x < leftMostIndex ) ) leftMostIndex = cell.pos.x;
+						}
+						const radius = Math.round( this.settings.cellSize * this.settings.pointsHintSize / 100 / 2 );
+						const pos = new Point( this.settings.xFieldPos + leftMostIndex*this.settings.fullCellSize - 2*this.settings.lineWidth - radius,
+											   this.settings.yFieldPos + topMostIndex*this.settings.fullCellSize - 2*this.settings.lineWidth - radius );
+						const leftMostCoordinate = this.settings.xFieldPos - this.settings.xMarginAmount + 2*this.settings.lineWidth + radius;
+						const topMostCoordinate = this.settings.yFieldPos - this.settings.yMarginAmount + 2*this.settings.lineWidth + radius;
+						if( pos.x < leftMostCoordinate ) pos.x = leftMostCoordinate;
+						if( pos.y < topMostCoordinate ) pos.y = topMostCoordinate;
+						const colorIndex = this.data.activeCell.ball.colorIndex;
+						const colorConfig = this.settings.colors[colorIndex];
+
+						this.drawCircle( pos, radius, colorConfig.hintColor, 1.00, true );
+						this.drawCircle( pos, radius, colorConfig.hintBorderColor, 1.00, false );
+
+						const tempTextFont = this.ctx.font;
+						const tempTextFontColor = this.ctx.fillStyle;
+						const tempTextAlign = this.ctx.textAlign;
+						const tempTextBaseline = this.ctx.textBaseline;
+						this.ctx.font = 'bold ' + Math.round( this.settings.cellSize / 2.4 ) + 'px ' + this.settings.headerTextFont;
+						this.ctx.fillStyle = colorConfig.hintFontColor;
+						this.ctx.textAlign = 'center';
+						this.ctx.textBaseline = 'middle';
+						this.ctx.fillText( this.data.getMoveScore( this.settings, this.data.activeCells.length ), pos.x, pos.y );
+						this.ctx.textAlign = tempTextAlign;
+						this.ctx.textBaseline = tempTextBaseline;
+						this.ctx.fillStyle = tempTextFontColor;
+						this.ctx.font = tempTextFont;
+					}
+				}
+
+				drawHeader() {
+					const isDeviceLandscape = this.settings.isLandscape;
+
+					let scoreElemPos = new Point( isDeviceLandscape ? this.settings.lineWidth : this.settings.borderWidth + this.settings.xMarginAmount + this.settings.lineWidth,
+												  isDeviceLandscape ? this.settings.headerTextPaddingYAmount + this.settings.headerTextFontSizePadding + this.settings.headerTextFontSizeAmount + this.settings.lineWidth : this.settings.yFieldPos - this.settings.yMarginAmount - this.settings.borderWidth - this.settings.fullCellSize - this.settings.headerPaddingAmount );
+					let scoreElemSize = new Point( 3*this.settings.fullCellSize - this.settings.lineWidth,
+												   this.settings.cellSize );
+
+					this.ctx.fillStyle = this.settings.headerTextFontColor;
+					this.ctx.font = '' + this.settings.headerTextFontSizeAmount + 'px ' + this.settings.headerTextFont;
+					this.ctx.fillText( 'Score:', scoreElemPos.x + this.settings.headerTextPaddingXAmount, scoreElemPos.y - this.settings.headerTextPaddingYAmount );
+
+					this.ctx.fillStyle = this.settings.backgroundColor;
+					this.ctx.fillRect( scoreElemPos.x, scoreElemPos.y,
+									   scoreElemSize.x, scoreElemSize.y );
+					for( let x=0; x<=1; x++ ) {
+						this.drawLine( scoreElemPos.x - this.settings.lineWidth + x*scoreElemSize.x, scoreElemPos.y - this.settings.lineWidth,
+									   this.settings.lineWidth, scoreElemSize.y + this.settings.lineWidth,
+									   this.settings.borderColor );
+					}
+					for( let y=0; y<=1; y++ ) {
+						this.drawLine( scoreElemPos.x - this.settings.lineWidth, scoreElemPos.y - this.settings.lineWidth + y*(scoreElemSize.y + this.settings.lineWidth),
+									   scoreElemSize.x + this.settings.lineWidth, this.settings.lineWidth,
+									   this.settings.borderColor );
+					}
+
+					const oldTextBaselineScore = this.ctx.textBaseline;
+					const oldTextAlignScore = this.ctx.textAlign;
+					this.ctx.fillStyle = this.settings.headerTextFontColor;
+					this.ctx.textAlign = 'center';
+					let scoreElemFontSize = this.settings.ballSize*2*1.05;
+					this.ctx.font = '' + scoreElemFontSize + 'px ' + this.settings.headerTextFont;
+					this.ctx.textBaseline = 'middle';
+					this.ctx.fillText( this.data.boardScore, scoreElemPos.x + 0.5*(scoreElemSize.x + this.settings.lineWidth), scoreElemPos.y + scoreElemSize.y/2 + scoreElemFontSize*0.07 );
+					this.ctx.textAlign = oldTextAlignScore;
+					this.ctx.textBaseline = oldTextBaselineScore;
+
+					let modeElemPos = new Point( isDeviceLandscape ? this.settings.lineWidth : this.settings.borderWidth + this.settings.xMarginAmount + 4*this.settings.fullCellSize + this.settings.lineWidth,
+												 isDeviceLandscape ? this.settings.headerPaddingAmount + 2*(this.settings.headerTextPaddingYAmount + this.settings.headerTextFontSizePadding + this.settings.headerTextFontSizeAmount) + this.settings.fullCellSize + this.settings.lineWidth : this.settings.yFieldPos - this.settings.yMarginAmount - this.settings.borderWidth - this.settings.fullCellSize - this.settings.headerPaddingAmount );
+					let modeElemSize = new Point( isDeviceLandscape ? 3*this.settings.fullCellSize - this.settings.lineWidth : 5*this.settings.fullCellSize - this.settings.lineWidth,
+												  this.settings.cellSize );
+
+					this.ctx.fillStyle = this.settings.headerTextFontColor;
+					this.ctx.font = '' + this.settings.headerTextFontSizeAmount + 'px ' + this.settings.headerTextFont;
+					this.ctx.fillText( 'Mode:', modeElemPos.x + this.settings.headerTextPaddingXAmount, modeElemPos.y - this.settings.headerTextPaddingYAmount );
+
+					this.ctx.fillStyle = this.settings.backgroundColor;
+					this.ctx.fillRect( modeElemPos.x, modeElemPos.y,
+									   modeElemSize.x, modeElemSize.y );
+					for( let x=0; x<=1; x++ ) {
+						this.drawLine( modeElemPos.x - this.settings.lineWidth + x*modeElemSize.x, modeElemPos.y - this.settings.lineWidth,
+									   this.settings.lineWidth, modeElemSize.y + this.settings.lineWidth,
+									   this.settings.borderColor );
+					}
+					for( let y=0; y<=1; y++ ) {
+						this.drawLine( modeElemPos.x - this.settings.lineWidth, modeElemPos.y - this.settings.lineWidth + y*(modeElemSize.y + this.settings.lineWidth),
+									   modeElemSize.x + this.settings.lineWidth, this.settings.lineWidth,
+									   this.settings.borderColor );
+					}
+
+					const oldTextBaselineGameMode = this.ctx.textBaseline;
+					const oldTextAlignGameMode = this.ctx.textAlign;
+					this.ctx.fillStyle = this.settings.headerTextFontColor;
+					this.ctx.textAlign = 'center';
+					let modeElemFontSize = this.settings.ballSize*2*0.8;
+					this.ctx.font = '' + modeElemFontSize * ( isDeviceLandscape ? 0.63 : 1 ) + 'px ' + this.settings.headerTextFont;
+					this.ctx.textBaseline = 'middle';
+					this.ctx.fillText( this.settings.gameModeNames[this.settings.gameModeIndex-1], modeElemPos.x + 0.5*(modeElemSize.x + this.settings.lineWidth), modeElemPos.y + modeElemSize.y/2 + modeElemFontSize*0.06 );
+					this.ctx.textAlign = oldTextAlignGameMode;
+					this.ctx.textBaseline = oldTextBaselineGameMode;
+
+					this.drawUndoButton();
+				}
+
+				drawNextBalls() {
+					if( this.settings.hasNextBalls ) {
+						let nextBalls = this.data.nextBalls[this.data.nextBalls.length-1]
+						let xFieldCenter = Math.round( this.settings.xFieldPos + this.settings.xFieldSize*this.settings.fullCellSize/2 );
+						let ballsWidth = nextBalls.length * this.settings.nextBallCellSize;
+						let nextBallsPos = new Point( Math.round( xFieldCenter - ballsWidth/2 + this.settings.lineWidth ),
+													  Math.round( this.settings.yFieldPos + this.settings.yMarginAmount + (this.settings.yFieldSize-0.5)*this.settings.fullCellSize ) - this.settings.nextBallSize + this.settings.lineWidth );
+
+						for( let newBallIndex=0; newBallIndex < nextBalls.length; newBallIndex++ ) {
+							const newBall = nextBalls[ newBallIndex ];
+							let point = new Point( nextBallsPos.x + newBallIndex*this.settings.nextBallCellSize,
+												   nextBallsPos.y );
+							this.drawBall( newBall, point, this.settings.nextBallSize, this.ctx, this.cache.nextBallsRenderCanvas );
+						}
+					}
+
+				}
+
+				getUndoIconLocation() {
+					const isDeviceLandscape = this.settings.isLandscape;
+					let startPoint = new Point( isDeviceLandscape ? this.settings.lineWidth : this.canv.width - 2*(this.settings.scaleFactor-1) - this.settings.fullCellSize + this.settings.lineWidth - this.settings.xMarginAmount - this.settings.borderWidth,
+												isDeviceLandscape ? 2*this.settings.headerPaddingAmount + 3*(this.settings.headerTextPaddingYAmount + this.settings.headerTextFontSizePadding + this.settings.headerTextFontSizeAmount) + 2*this.settings.fullCellSize + this.settings.lineWidth : this.settings.yFieldPos - this.settings.yMarginAmount - this.settings.borderWidth - this.settings.fullCellSize - this.settings.headerPaddingAmount );
+					let width = isDeviceLandscape ? 3*this.settings.fullCellSize - 2*this.settings.lineWidth : this.settings.cellSize;
+					let height = this.settings.cellSize;
+					let endPoint = new Point( startPoint.x + width, startPoint.y + height );
+					return {
+						startPoint: startPoint,
+						endPoint: endPoint,
+						width: width,
+						height: height
+					}
+				}
+
+				drawUndoButton() {
+					let undoItemLocation = this.getUndoIconLocation();
+					this.ctx.fillStyle = this.settings.headerTextFontColor;
+					this.ctx.font = '' + this.settings.headerTextFontSizeAmount + 'px ' + this.settings.headerTextFont;
+					this.ctx.fillText( 'Undo:', undoItemLocation.startPoint.x + this.settings.headerTextPaddingXAmount, undoItemLocation.startPoint.y - this.settings.headerTextPaddingYAmount );
+
+					var isMouseHoverUndo = this.isMouseHover( undoItemLocation );
+					var isUndoEnabled = this.isUndoEnabled();
+					this.ctx.globalAlpha = 0.08;
+					this.ctx.fillStyle = isUndoEnabled && isMouseHoverUndo ? this.settings.undoIconHoverColor : this.settings.backgroundColor;
+					this.ctx.fillRect( undoItemLocation.startPoint.x, undoItemLocation.startPoint.y,
+									   undoItemLocation.width, undoItemLocation.height );
+					this.ctx.globalAlpha = 1;
+					this.ctx.fillStyle = this.settings.backgroundColor;
+					for( let x=0; x<=1; x++ ) {
+						this.drawLine( undoItemLocation.startPoint.x - this.settings.lineWidth + x*(undoItemLocation.width + this.settings.lineWidth), undoItemLocation.startPoint.y,
+									   this.settings.lineWidth, undoItemLocation.height + this.settings.lineWidth,
+									   this.settings.borderColor );
+					}
+					for( let y=0; y<=1; y++ ) {
+						this.drawLine( undoItemLocation.startPoint.x - this.settings.lineWidth, undoItemLocation.startPoint.y - this.settings.lineWidth + y*(this.settings.cellSize + this.settings.lineWidth),
+									   undoItemLocation.width + 2*this.settings.lineWidth, this.settings.lineWidth,
+									   this.settings.borderColor );
+					}
+					this.drawUndoIcon( undoItemLocation );
+				}
+
+				drawUndoIcon( undoItemLocation ) {
+					var undoCenter = new Point( ( undoItemLocation.startPoint.x + undoItemLocation.endPoint.x ) / 2, ( undoItemLocation.startPoint.y + undoItemLocation.endPoint.y ) / 2 );
+					var globalAlphaOld = this.ctx.globalAlpha;
+					var iconRadius = this.settings.ballSize * 1.3;
+					var iconCurvingRadius = this.settings.ballSize * 0.4;
+					var triangleLength = this.settings.ballSize * 0.75;
+					var triangleWidth = triangleLength/3.5;
+					var isMouseHoverUndo = this.isMouseHover( undoItemLocation );
+					var isUndoAvailable = this.isUndoAvailable();
+					var isUndoEnabled = this.isUndoEnabled();
+					undoCenter.y = undoCenter.y + triangleWidth / 6;
+					//this.canv.style.cursor = isMouseHoverUndo && isUndoAvailable ? 'pointer' : null;
+					this.ctx.strokeStyle = isUndoEnabled && isMouseHoverUndo ? this.settings.undoIconHoverColor : this.settings.headerTextFontColor;
+					this.ctx.globalAlpha = isUndoAvailable ? 1.0 : 0.25;
+					this.ctx.lineWidth = this.settings.ballSize * 0.15;
+
+					const xUndoCenterLessRadius = undoCenter.x - iconRadius/2;
+					const xUndoCenterMoreRadius = undoCenter.x + iconRadius/2;
+					const yUndoCenterLessRadius = undoCenter.y - iconRadius/2;
+					const yUndoCenterMoreRadius = undoCenter.y + iconRadius/2;
+
+					this.ctx.beginPath();
+					this.ctx.arc( xUndoCenterLessRadius + iconCurvingRadius, yUndoCenterMoreRadius - iconCurvingRadius, iconCurvingRadius, this.cache.halfPi, Math.PI )
+					this.ctx.stroke();
+
+					this.ctx.beginPath();
+					this.ctx.moveTo( xUndoCenterLessRadius + iconCurvingRadius, yUndoCenterMoreRadius );
+					this.ctx.lineTo( xUndoCenterMoreRadius - iconCurvingRadius, yUndoCenterMoreRadius );
+					this.ctx.stroke();
+
+					this.ctx.beginPath();
+					this.ctx.arc( xUndoCenterMoreRadius - iconCurvingRadius, yUndoCenterMoreRadius - iconCurvingRadius, iconCurvingRadius, 0, this.cache.halfPi )
+					this.ctx.stroke();
+
+					this.ctx.beginPath();
+					this.ctx.moveTo( xUndoCenterMoreRadius, yUndoCenterMoreRadius - iconCurvingRadius);
+					this.ctx.lineTo( xUndoCenterMoreRadius, yUndoCenterLessRadius + iconCurvingRadius );
+					this.ctx.stroke();
+
+					this.ctx.beginPath();
+					this.ctx.arc( xUndoCenterMoreRadius - iconCurvingRadius, yUndoCenterLessRadius + iconCurvingRadius, iconCurvingRadius, Math.PI + this.cache.halfPi, this.cache.twoPi );
+					this.ctx.stroke();
+
+					this.ctx.beginPath();
+					this.ctx.moveTo( xUndoCenterMoreRadius - iconCurvingRadius, yUndoCenterLessRadius );
+					this.ctx.lineTo( xUndoCenterLessRadius + triangleLength, yUndoCenterLessRadius );
+					this.ctx.stroke();
+
+					this.ctx.beginPath();
+					this.ctx.fillStyle = isUndoEnabled && isMouseHoverUndo ? this.settings.undoIconHoverColor : this.settings.headerTextFontColor;
+					this.ctx.moveTo( xUndoCenterLessRadius, yUndoCenterLessRadius );
+					this.ctx.lineTo( xUndoCenterLessRadius + triangleLength, yUndoCenterLessRadius + triangleWidth );
+					this.ctx.lineTo( xUndoCenterLessRadius + triangleLength, yUndoCenterLessRadius - triangleWidth );
+					this.ctx.fill();
+
+					this.ctx.globalAlpha = globalAlphaOld;
+				}
+
+				isUndoAvailable() {
+					return this.data.undoSnapshot != null && !this.endGame;
+				}
+
+				isUndoEnabled() {
+					return this.isUndoAvailable() && !this.data.animations.animationInProgress();
+				}
+
+				isMouseHover( item ) {
+					return this.data.mousePos != null && ( this.data.mousePos.x >= item.startPoint.x - this.settings.lineWidth ) && ( this.data.mousePos.x < item.endPoint.x + this.settings.lineWidth ) && ( this.data.mousePos.y >= item.startPoint.y - this.settings.lineWidth ) && ( this.data.mousePos.y < item.endPoint.y + this.settings.lineWidth );
+				}
+
+				getCell( mousePos ) {
+					if( mousePos == null ) return null;
+					const cellHoverPos = new Point( this.data.mousePos.x - this.settings.xFieldPos, this.data.mousePos.y - this.settings.yFieldPos );
+					let xCellHover = Math.floor( (cellHoverPos.x) / this.settings.fullCellSize );
+					let yCellHover = Math.floor( (cellHoverPos.y) / this.settings.fullCellSize );
+					if( xCellHover < 0 || xCellHover >= this.settings.xFieldSize || yCellHover < 0 || yCellHover >= this.settings.yFieldBallsSize ) {
+						xCellHover = null;
+						yCellHover = null;
+					}
+					if( xCellHover == null || yCellHover == null ) return null;
+					return this.data.field[yCellHover][xCellHover];
+				}
+
+				captureMousePosition( event ) {
+					if( !event ) return;
+					var rect = this.canv.getBoundingClientRect();
+					this.data.mousePos = new Point( ( (event.clientX - rect.left) / (rect.right - rect.left) * this.canv.width ),
+													( (event.clientY - rect.top) / (rect.bottom - rect.top) * this.canv.height ) );
+				}
+
+				drawField() {
+					const topLeftBorderPosition = new Point( this.settings.xFieldPos - this.settings.xMarginAmount - this.settings.borderWidth, this.settings.yFieldPos - this.settings.yMarginAmount - this.settings.borderWidth );
+					const borderSize = new Point( this.settings.xFieldSize*this.settings.fullCellSize + 2*this.settings.xMarginAmount + 2*this.settings.borderWidth, 2*this.settings.borderWidth + 2*this.settings.yMarginAmount + this.settings.yFieldSize*this.settings.fullCellSize );
+					for( let x=0; x<=1; x++ ) {
+						this.drawLine( topLeftBorderPosition.x + x*(borderSize.x - this.settings.borderWidth), topLeftBorderPosition.y,
+									   this.settings.borderWidth, borderSize.y,
+									   this.settings.borderColor );
+					}
+					for( let y=0; y<=this.settings.yFieldSize; y++ ) {
+						this.drawLine( topLeftBorderPosition.x, topLeftBorderPosition.y + y*(borderSize.y - this.settings.borderWidth),
+									   borderSize.x, this.settings.borderWidth,
+									   this.settings.borderColor );
+					}
+					this.ctx.fillStyle = this.settings.backgroundColor;
+					this.ctx.fillRect( this.settings.xFieldPos - this.settings.xMarginAmount, this.settings.yFieldPos - this.settings.yMarginAmount,
+									   this.settings.fullCellSize*this.settings.xFieldSize + 2*this.settings.xMarginAmount, this.settings.fullCellSize*this.settings.yFieldSize + 2*this.settings.yMarginAmount );
+					for( let x=0; x<=this.settings.xFieldSize-1; x++ ) {
+						this.drawLine( this.settings.xFieldPos + x*this.settings.fullCellSize, this.settings.yFieldPos,
+									   this.settings.lineWidth, this.settings.yFieldBallsSize*this.settings.fullCellSize,
+									   this.settings.backgroundGridColor );
+						this.drawLine( this.settings.xFieldPos + this.settings.cellSize + this.settings.lineWidth + x*this.settings.fullCellSize, this.settings.yFieldPos,
+									   this.settings.lineWidth, this.settings.yFieldBallsSize*this.settings.fullCellSize,
+									   this.settings.backgroundGridColor );
+					}
+					for( let y=0; y<=this.settings.yFieldBallsSize-1; y++ ) {
+						this.drawLine( this.settings.xFieldPos, y*this.settings.fullCellSize + this.settings.yFieldPos,
+									   this.settings.fullCellSize*this.settings.xFieldSize, this.settings.lineWidth,
+									   this.settings.backgroundGridColor );
+						this.drawLine( this.settings.xFieldPos, y*this.settings.fullCellSize + this.settings.yFieldPos + this.settings.cellSize + this.settings.lineWidth,
+									   this.settings.fullCellSize*this.settings.xFieldSize, this.settings.lineWidth,
+									   this.settings.backgroundGridColor );
+					}
+
+					if( this.settings.hasNextBalls ) {
+						this.drawLine( topLeftBorderPosition.x, topLeftBorderPosition.y + borderSize.y - this.settings.borderWidth - this.settings.fullCellSize,
+									   borderSize.x, this.settings.borderWidth,
+									   this.settings.borderColor );
+					}
+				}
+
+				drawEndGame() {
+					if( !this.endGame ) return;
+					this.ctx.globalAlpha = 0.92;
+					this.ctx.fillStyle = this.settings.backgroundColor;
+					let fieldWidth = this.settings.xFieldSize*this.settings.fullCellSize + 2*this.settings.xMarginAmount;
+					let fieldHeight = this.settings.yFieldSize*this.settings.fullCellSize + 2*this.settings.yMarginAmount;
+					let fieldLeft = this.settings.xFieldPos - this.settings.xMarginAmount;
+					let fieldTop = this.settings.yFieldPos - this.settings.yMarginAmount;
+					let xFieldCenter = Math.round( this.settings.xFieldPos + this.settings.xFieldSize*this.settings.fullCellSize/2 );
+					this.ctx.fillRect( fieldLeft, fieldTop,
+									   fieldWidth, fieldHeight );
+					this.ctx.globalAlpha = 1;
+					for( let x=0; x<=1; x++ ) {
+						this.drawLine( x*(fieldWidth + this.settings.borderWidth) + fieldLeft - this.settings.borderWidth, fieldTop - this.settings.borderWidth,
+									   this.settings.lineWidth, fieldHeight + 2*this.settings.borderWidth,
+									   this.settings.borderColor );
+					}
+					for( let y=0; y<=1; y++ ) {
+						this.drawLine( fieldLeft - this.settings.borderWidth, y*(fieldHeight + this.settings.borderWidth) + fieldTop - this.settings.borderWidth,
+									   fieldWidth + 2*this.settings.borderWidth, this.settings.lineWidth,
+									   this.settings.borderColor );
+					}
+
+					let endGameFontSize = this.settings.ballSize*2;
+					let endGameFontSizeAdj = endGameFontSize*1.17;
+					let endGameTextY = ( this.canv.height + this.settings.yFieldPos )/2 + this.settings.cellSize*7/4;
+					this.ctx.fillStyle = this.settings.headerTextFontColor;
+					this.ctx.textAlign = 'center';
+					this.ctx.font = 'bold ' + endGameFontSizeAdj + 'px ' + this.settings.headerTextFont;
+					let endGameText = 'Game Over';
+					let endGameTextSize = this.ctx.measureText( endGameText ).height;
+					this.ctx.fillText( endGameText, xFieldCenter, endGameTextY );
+
+					let startOverButtonLocation = this.getStartOverButtonLocation();
+					let isMouseOverStartOverButton = this.isMouseHover( startOverButtonLocation );
+
+					this.ctx.globalAlpha = 0.08;
+					this.ctx.fillStyle = isMouseOverStartOverButton ? this.settings.undoIconHoverColor : this.settings.backgroundColor;
+					this.ctx.fillRect( startOverButtonLocation.startPoint.x, startOverButtonLocation.startPoint.y,
+									   startOverButtonLocation.width, startOverButtonLocation.height);
+					this.ctx.globalAlpha = 1;
+					this.ctx.fillStyle = this.settings.backgroundColor;
+					for( let x=0; x<=1; x++ ) {
+						this.drawLine( x*(startOverButtonLocation.width + this.settings.lineWidth) + startOverButtonLocation.startPoint.x - this.settings.lineWidth, startOverButtonLocation.startPoint.y - this.settings.lineWidth,
+									   this.settings.lineWidth, startOverButtonLocation.height + 2*this.settings.lineWidth,
+									   this.settings.borderColor );
+					}
+					for( let y=0; y<=1; y++ ) {
+						this.drawLine( startOverButtonLocation.startPoint.x - this.settings.lineWidth, y*(startOverButtonLocation.height + this.settings.lineWidth) + startOverButtonLocation.startPoint.y - this.settings.lineWidth,
+									   startOverButtonLocation.width + 2*this.settings.lineWidth, this.settings.lineWidth,
+									   this.settings.borderColor );
+					}
+
+					let startOverText = 'Play Again';
+					let startOverFontSize = this.settings.ballSize*3/4;
+					let startOverFontSizeAdj = startOverFontSize*1.17;
+					let yPadding = this.settings.cellSize/6;
+					this.ctx.font = 'bold ' + startOverFontSizeAdj + 'px ' + this.settings.headerTextFont;
+					this.ctx.fillStyle = isMouseOverStartOverButton ? this.settings.undoIconHoverColor : this.settings.headerTextFontColor;
+					this.ctx.fillText( startOverText, xFieldCenter, startOverButtonLocation.startPoint.y + yPadding + startOverFontSize + this.settings.lineWidth );
+
+					let topScoresFontSize = this.settings.ballSize*5/6;
+					let topScoresFontSizeAdj = topScoresFontSize*1.17;
+					let newHighScoreShown = false;
+					this.ctx.font = 'bold ' + topScoresFontSizeAdj + 'px ' + this.settings.headerTextFont;
+					this.ctx.textAlign = 'center';
+					for( let y=0; y<this.topScores[this.settings.gameModeIndex].length; y++ ) {
+						if( !newHighScoreShown && this.data.getTotalScore() == this.topScores[this.settings.gameModeIndex][y] ) {
+							newHighScoreShown = true;
+							this.ctx.fillStyle = '#DD2222';
+							this.ctx.fillText( '> ' + this.topScores[this.settings.gameModeIndex][y] + ' <', xFieldCenter, endGameTextY - endGameFontSizeAdj - this.topScores[this.settings.gameModeIndex].length*topScoresFontSizeAdj + y*topScoresFontSizeAdj );
+						} else {
+							this.ctx.fillStyle = this.settings.headerTextFontColor;
+							this.ctx.fillText( this.topScores[this.settings.gameModeIndex][y], xFieldCenter, endGameTextY - endGameFontSizeAdj - this.topScores[this.settings.gameModeIndex].length*topScoresFontSizeAdj + y*topScoresFontSizeAdj );
+						}
+					}
+
+					this.ctx.font = 'bold ' + topScoresFontSizeAdj*1.15 + 'px ' + this.settings.headerTextFont;
+					this.ctx.textAlign = 'center';
+					this.ctx.fillText( 'Top ' + this.topScores[this.settings.gameModeIndex].length + ' Scores:', xFieldCenter, endGameTextY - endGameFontSizeAdj - (this.topScores[this.settings.gameModeIndex].length + 1)*topScoresFontSizeAdj - topScoresFontSizeAdj/2 );
+					if( newHighScoreShown ) {
+						this.ctx.font = 'bold ' + topScoresFontSizeAdj*1.3 + 'px ' + this.settings.headerTextFont;
+						this.ctx.fillStyle = '#DD2222';
+						this.ctx.fillText( 'New High Score!', xFieldCenter, endGameTextY - endGameFontSizeAdj - (this.topScores[this.settings.gameModeIndex].length + 1)*topScoresFontSizeAdj - topScoresFontSizeAdj*1.15 - topScoresFontSizeAdj );
+					}
+
+					const scoreStatsFontSizeAdj = topScoresFontSizeAdj*1.15*0.7;
+					this.ctx.font = 'bold ' + scoreStatsFontSizeAdj + 'px ' + this.settings.headerTextFont;
+					this.ctx.textAlign = 'center';
+					this.ctx.fillStyle = this.settings.headerTextFontColor;
+					this.ctx.globalAlpha = 0.7;
+					const scoreText = 'Score';
+					const bonusText = 'Bonus';
+					const totalText = 'Total';
+					const scoreValue = '' + this.data.boardScore;
+					const bonusValue = '' + this.data.boardBonus;
+					const totalValue = '' + this.data.getTotalScore();
+					let maxTextWidth = Math.max( this.ctx.measureText( scoreText ).width, this.ctx.measureText( bonusText ).width, this.ctx.measureText( totalText ).width, this.ctx.measureText( scoreValue ).width, this.ctx.measureText( bonusValue ).width, this.ctx.measureText( totalValue ).width ) + 25;
+					const scoreStatsSecondRowLocation = endGameTextY - endGameFontSizeAdj - (this.topScores[this.settings.gameModeIndex].length + 5)*topScoresFontSizeAdj - scoreStatsFontSizeAdj;
+					const scoreStatsFirstRowLocation = scoreStatsSecondRowLocation - topScoresFontSizeAdj;
+					this.ctx.fillText( scoreText, xFieldCenter - maxTextWidth, scoreStatsFirstRowLocation );
+					this.ctx.fillText( bonusText, xFieldCenter, scoreStatsFirstRowLocation );
+					this.ctx.fillText( totalText, xFieldCenter + maxTextWidth, scoreStatsFirstRowLocation );
+					this.ctx.fillText( scoreValue, xFieldCenter - maxTextWidth, scoreStatsSecondRowLocation );
+					this.ctx.fillText( bonusValue, xFieldCenter, scoreStatsSecondRowLocation );
+					this.ctx.fillText( totalValue, xFieldCenter + maxTextWidth, scoreStatsSecondRowLocation );
+					this.ctx.globalAlpha = 1;
+
+					this.ctx.fillStyle = this.settings.headerTextFontColor;
+					this.ctx.textAlign = 'left';
+					this.ctx.font = this.settings.cellSize/4 + 'px ' + this.settings.headerTextFont;
+					const initialTextBaseline = this.ctx.textBaseline;
+					this.ctx.textBaseline = 'hanging';
+					this.ctx.globalAlpha = 0.5;
+					this.ctx.fillText( 'Version: ' + this.settings.version, this.settings.xFieldPos - this.settings.xMarginAmount + this.settings.cellSize*0.1 + this.settings.lineWidth, this.settings.yFieldPos - this.settings.yMarginAmount + this.settings.cellSize*0.1 + this.settings.lineWidth );
+					
+					this.ctx.textBaseline = initialTextBaseline;
+					this.ctx.globalAlpha = 1;
+				}
+
+				getStartOverButtonLocation() {
+					let xFieldCenter = this.settings.xFieldPos + this.settings.xFieldSize*this.settings.fullCellSize/2;
+					let startOverFontSize = this.settings.ballSize*3/4;
+					let startOverFontSizeAdj = startOverFontSize*1.17;
+					this.ctx.font = 'bold ' + startOverFontSizeAdj + 'px ' + this.settings.headerTextFont;
+					let startOverText = 'Play Again';
+					let startOverTextSize = this.ctx.measureText( startOverText );
+					let xPadding = this.settings.cellSize/4;
+					let yPadding = this.settings.cellSize/6;
+					let buttonLeftX = Math.round( xFieldCenter - startOverTextSize.width/2 - xPadding );
+					let buttonRighX = Math.round( xFieldCenter + startOverTextSize.width/2 + xPadding );
+					let buttonTopY = Math.round( ( this.canv.height + this.settings.yFieldPos )/2 + this.settings.cellSize - yPadding + this.settings.cellSize*7/4 );
+					let buttonBotY = Math.round( buttonTopY + startOverFontSizeAdj + 2*yPadding + this.settings.lineWidth );
+					return {
+						startPoint: new Point( buttonLeftX, buttonTopY ),
+						endPoint: new Point( buttonRighX, buttonBotY ),
+						width: buttonRighX - buttonLeftX,
+						height: buttonBotY - buttonTopY
+					};
+				}
+
+				drawBalls() {
+					for( let y=0; y<this.data.field.length; y++ ) {
+						let row = this.data.field[y];
+						for( let x=0; x<row.length; x++ ) {
+							let cell = row[x];
+							if( cell.ball == null ) continue;
+							this.drawBall( cell.ball, undefined, undefined, this.ctx, this.cache.ballsRenderCanvas );
+						}
+					}
+				}
+
+				drawBall( ball, pointOverride, radOverride, ctx, cacheCtx ) {
+					if( ctx === undefined ) ctx = this.ctx;
+					if( cacheCtx === undefined || cacheCtx == null ) {
+						if( !ball || ( ball.pos.x == null || ball.pos.y == null ) && ( !pointOverride || pointOverride.x == null || pointOverride.y == null ) ) return;
+						if( this.settings.draw3dBalls == true ) {
+							this.draw3dBall( ball, pointOverride, radOverride, ctx );
+						} else {
+							this.draw2dBall( pointOverride === undefined ? this.translateCoords( ball.pos.x, ball.pos.y ) : pointOverride, radOverride === undefined ? ball.rad : radOverride, this.getBallColor( ball ), this.getBallAlpha( ball ), ctx );
+						}
+					} else {
+						let coords;
+						if( pointOverride === undefined ) {
+							coords = this.translateCoords( ball.pos.x, ball.pos.y, false );
+						} else {
+							coords = pointOverride;
+						}
+						const ballRadius = radOverride != null && radOverride !== undefined ? radOverride : ball.rad;
+						const ballDiameter = 2*ballRadius;
+						ctx.drawImage( cacheCtx, 1 + ball.colorIndex*(ballDiameter+2), 1, ballDiameter, ballDiameter, Math.round( coords.x ), Math.round( coords.y ), ballDiameter, ballDiameter );
+					}
+				}
+
+				draw2dBall( pos, radius, color, alpha, ctx ) {
+					if( ctx === undefined ) ctx = this.ctx;
+					this.drawCircle( pos, radius, color, alpha, true, ctx );
+				}
+
+				draw3dBall( ball, pointOverride, radOverride, ctx ) {
+					if( ctx === undefined ) ctx = this.ctx;
+					for( let j = 0; j < this.settings.lightSources.length; j++ ) {
+						let light = this.settings.lightSources[j];
+						ctx.fillStyle = this.drawGradient( ball, light, this.settings.lightAmbient, pointOverride, radOverride, ctx );
+						ctx.globalCompositeOperation = light.comp;
+						this.draw2dBall( pointOverride === undefined ? this.translateCoords( ball.pos.x, ball.pos.y ) : pointOverride, radOverride === undefined ? ball.rad : radOverride, null, this.getBallAlpha( ball ), ctx );
+					}
+					ctx.globalCompositeOperation = "source-over";
+				}
+
+				drawCircle( pos, radius, color, alpha, doFill, ctx ) {
+					if( ctx === undefined ) ctx = this.ctx;
+					ctx.globalAlpha = alpha;
+					if( color != null ) {
+						ctx.fillStyle = color;
+					}
+					ctx.beginPath();
+					ctx.arc( pos.x, pos.y, radius, 0, this.cache.twoPi );
+					if( doFill ) {
+						ctx.fill();
+					} else {
+						const lineWidthTemp = ctx.lineWidth;
+						ctx.lineWidth = 1;
+						ctx.stroke();
+						ctx.lineWidth = lineWidthTemp;
+					}
+					ctx.globalAlpha = 1.00;
+				}
+
+				highlightCells( cells, cellColor, innerCellColor, outerCellColor ) {
+					let pointMap = [];
+					for( let y = 0; y < this.data.field.length; y++ ) {
+						pointMap.push( [] );
+						for( let x = 0; x < this.data.field[y].length; x++ ) {
+							pointMap[y].push( 0 );
+						}
+					}
+					for( const cellIndex in cells ) {
+						const cell = cells[cellIndex];
+						pointMap[cell.pos.y][cell.pos.x] = 1;
+						this.highlightCell( this.data.field[cell.pos.y][cell.pos.x], cellColor );
+					}
+					for( let y = 0; y < pointMap.length; y++ ) {
+						for( let x = 0; x < pointMap[y].length; x++ ) {
+							if( pointMap[y][x] == 0 ) continue;
+							if( innerCellColor != null ) {
+								if( x+1 < pointMap[y].length && pointMap[y][x+1] > 0 ) {
+									const corner = x+1 < pointMap.length && y+1 < pointMap.length && pointMap[y+1][x+1] > 0 && pointMap[y+1][x] > 0 ? this.settings.lineWidth : 0;
+									this.drawLine( this.settings.xFieldPos + this.settings.lineWidth + x*this.settings.fullCellSize + this.settings.cellSize,
+												   this.settings.yFieldPos + this.settings.lineWidth + y*this.settings.fullCellSize,
+												   this.settings.lineWidth,
+												   this.settings.cellSize + corner,
+												   innerCellColor );
+								}
+								if( x-1 >= 0 && pointMap[y][x-1] > 0 ) {
+									const corner = x-1 >= 0 && y-1 >= 0 && pointMap[y-1][x-1] > 0 && pointMap[y-1][x] > 0 ? this.settings.lineWidth : 0;
+									this.drawLine( this.settings.xFieldPos + x*this.settings.fullCellSize,
+												   this.settings.yFieldPos + this.settings.lineWidth + y*this.settings.fullCellSize - corner,
+												   this.settings.lineWidth,
+												   this.settings.cellSize + corner,
+												   innerCellColor );
+								}
+								if( y+1 < pointMap.length && pointMap[y+1][x] > 0 ) {
+									const corner = x-1 >= 0 && y+1 < pointMap.length && pointMap[y+1][x-1] > 0 && pointMap[y][x-1] > 0 ? this.settings.lineWidth : 0;
+									this.drawLine( this.settings.xFieldPos + this.settings.lineWidth + x*this.settings.fullCellSize - corner,
+												   this.settings.yFieldPos + this.settings.lineWidth + y*this.settings.fullCellSize + this.settings.cellSize,
+												   this.settings.cellSize + corner,
+												   this.settings.lineWidth,
+												   innerCellColor );
+								}
+								if( y-1 >= 0 && pointMap[y-1][x] > 0 ) {
+									const corner = x+1 < pointMap.length && y-1 >= 0 && pointMap[y-1][x+1] > 0 && pointMap[y][x+1] > 0 ? this.settings.lineWidth : 0;
+									this.drawLine( this.settings.xFieldPos + this.settings.lineWidth + x*this.settings.fullCellSize,
+												   this.settings.yFieldPos + y*this.settings.fullCellSize,
+												   this.settings.cellSize + corner,
+												   this.settings.lineWidth,
+												   innerCellColor );
+								}
+							}
+							if( outerCellColor != null ) {
+								if( x+1 >= pointMap[y].length || pointMap[y][x+1] == 0 ) {
+									const topCorner = x+1 < pointMap.length && y-1 >= 0 && pointMap[y-1][x+1] > 0 && pointMap[y-1][x] > 0 ? this.settings.lineWidth : 0;
+									const botCorner = x+1 < pointMap.length && y+1 < pointMap.length && pointMap[y+1][x+1] > 0 && pointMap[y+1][x] > 0 ? this.settings.lineWidth : 0;
+									this.drawLine( this.settings.xFieldPos + this.settings.lineWidth + x*this.settings.fullCellSize + this.settings.cellSize,
+												   this.settings.yFieldPos + y*this.settings.fullCellSize - topCorner,
+												   this.settings.lineWidth,
+												   this.settings.fullCellSize + topCorner + botCorner,
+												   outerCellColor );
+								}
+								if( x-1 < 0 || pointMap[y][x-1] == 0 ) {
+									const topCorner = x-1 >= 0 && y-1 >= 0 && pointMap[y-1][x-1] > 0 && pointMap[y-1][x] > 0 ? this.settings.lineWidth : 0;
+									const botCorner = x-1 >= 0 && y+1 < pointMap.length && pointMap[y+1][x-1] > 0 && pointMap[y+1][x] > 0 ? this.settings.lineWidth : 0;
+									this.drawLine( this.settings.xFieldPos + x*this.settings.fullCellSize,
+												   this.settings.yFieldPos + y*this.settings.fullCellSize - topCorner,
+												   this.settings.lineWidth,
+												   this.settings.fullCellSize + topCorner + botCorner,
+												   outerCellColor );
+								}
+								if( y+1 >= pointMap.length || pointMap[y+1][x] == 0 ) {
+									const leftCorner = x-1 >= 0 && y+1 < pointMap.length && pointMap[y+1][x-1] > 0 && pointMap[y][x-1] > 0 ? this.settings.lineWidth : 0;
+									const rightCorner = x+1 < pointMap.length && y+1 < pointMap.length && pointMap[y+1][x+1] > 0 && pointMap[y][x+1] > 0 ? this.settings.lineWidth : 0;
+									this.drawLine( this.settings.xFieldPos + x*this.settings.fullCellSize - leftCorner,
+												   this.settings.yFieldPos + this.settings.lineWidth + y*this.settings.fullCellSize + this.settings.cellSize,
+												   this.settings.fullCellSize + leftCorner + rightCorner,
+												   this.settings.lineWidth,
+												   outerCellColor );
+								}
+								if( y-1 < 0 || pointMap[y-1][x] == 0 ) {
+									const leftCorner = x-1 >= 0 && y-1 >= 0 && pointMap[y-1][x-1] > 0 && pointMap[y][x-1] > 0 ? this.settings.lineWidth : 0;
+									const rightCorner = x+1 < pointMap.length && y-1 >= 0 && pointMap[y-1][x+1] > 0 && pointMap[y][x+1] > 0 ? this.settings.lineWidth : 0;
+									this.drawLine( this.settings.xFieldPos + x*this.settings.fullCellSize - leftCorner,
+												   this.settings.yFieldPos + y*this.settings.fullCellSize,
+												   this.settings.fullCellSize + leftCorner + rightCorner,
+												   this.settings.lineWidth,
+												   outerCellColor );
+								}
+							}
+						}
+					}
+
+				}
+
+				highlightCell( cell, color ) {
+					this.ctx.fillStyle = color;
+					this.ctx.fillRect( this.settings.xFieldPos + this.settings.lineWidth + cell.pos.x*this.settings.fullCellSize,
+									   this.settings.yFieldPos + this.settings.lineWidth + cell.pos.y*this.settings.fullCellSize,
+									   this.settings.cellSize,
+									   this.settings.cellSize );
+				}
+
+				drawLine( x1, y1, x2, y2, color ) {
+					this.ctx.fillStyle = color;
+					this.ctx.fillRect( x1, y1, x2, y2 );
+				}
+
+				getBallColor( ball ) {
+					if( ball.colorAnim != null ) {
+						return ball.colorAnim;
+					} else if( ball.colorIndex != null ) {
+						return this.settings.colors[ball.colorIndex].ballColor;
+					}
+				}
+
+				getBallAlpha( ball ) {
+					if( ball.colorAlpha != null ) {
+						return ball.colorAlpha;
+					} else {
+						return 1.00;
+					}
+				}
+
+				translateCoords( posX, posY, center ) {
+					if( center === undefined ) center = true;
+					if( posX == null ) posX = 0;
+					if( posY == null ) posY = 0;
+					return new Point( this.settings.xFieldPos + this.settings.lineWidth + posX*this.settings.fullCellSize + (center ? 0.5*this.settings.cellSize : 0),
+									  this.settings.yFieldPos + this.settings.lineWidth + posY*this.settings.fullCellSize + (center ? 0.5*this.settings.cellSize : 0) );
+				}
+
+				drawGradient( ball, light, ambient, pointOverride, radOverride, ctx ) {
+					if( ctx == null ) ctx = this.ctx;
+					let radius = radOverride === undefined ? ball.rad : radOverride;
+					let ballColor = this.getBallColor( ball );
+
+					let cacheKey = '' + ballColor + '_' + radius + '_' + light.xScale + '_' + light.yScale + '_' + light.spec + '_' + light.specPower + '_' + light.useAmbient; //radius, ballColor, spec => [color stops (r,g,b)], light position (x,y), distance, spread
+					let doCache = false;
+					let cachedBallData;
+					if( radius == this.settings.ballSize || radius == this.settings.nextBallSize ) {
+						doCache = true;
+						cachedBallData = this.cache.ballDataCache[ cacheKey ];
+					}
+					if( cachedBallData === undefined ) {
+						var xLightPosition = light.xScale * radius;
+						var yLightPosition = light.yScale * radius;
+
+						var distance = Math.sqrt( xLightPosition*xLightPosition + yLightPosition*yLightPosition ); // get the distance to the light source
+						distance *= light.spec ? 0.5 : 1; // if the light is a specular source then move it to half its position away
+						var dimming = 1 - Math.min( 1, ( distance / ( 4*radius ) ) ); // add some dimming so that the light does not wash out.
+						var lightRotate = ( 1 - dimming ) * this.cache.halfPi; // add a bit of pretend rotation on the z axis. This will bring in a little backlighting
+						var spread = Math.sin( lightRotate ) * radius * (light.spec ? 0.5 : 1); // spread the light a bit when near the edges. Reduce a bit for spec light
+
+						var colorStops = [];
+						var r,g,b;  // colour channels
+						var ballColors = this.hexToRgb( ballColor );
+						var step = 5*this.cache.halfPi/radius; // use the radius to work out what step will cover a pixel (approx)
+						for( var i = 0; i < this.cache.halfPi; i += step ) { // for each pixel going out on the radius add the calculated light value
+							let coeff = 1;
+							const highlight = light.highlight && i == 0 ? 50 : 0;
+							if( light.spec ) {
+								// fake spec light reduces dimming fall off
+								// light reflected has sharper falloff
+								// do not include back light via Math.abs
+								coeff = Math.max( 0, Math.cos( ( i + lightRotate ) * light.specPower ) * (1-dimming/3) );
+							} else {
+								// light value is the source lum * the cos of the angle to the light
+								// Using the abs value of the refelected light to give fake back light.
+								// add a bit of rotation with (lightRotate) 
+								// dimming to stop washing out 
+								// then clamp so does not go below zero
+								coeff = Math.abs( Math.cos( i + lightRotate ) );
+							}
+							r = ballColors.r * coeff + highlight;
+							g = ballColors.g * coeff + highlight;
+							b = ballColors.b * coeff + highlight;
+							if( light.useAmbient ) { // add ambient light //moved to addColorStop
+								r += ambient[0];
+								g += ambient[1];
+								b += ambient[2];
+							}
+							colorStops.push( { r: Math.floor(r), g: Math.floor(g), b: Math.floor(b), index: i/this.cache.halfPi } ); // add the colour stop with the amount of the effect we want
+						}
+
+						cachedBallData = {
+							position: new Point( xLightPosition, yLightPosition ),
+							distance: distance,
+							spread: spread,
+							colorStops: colorStops
+						};
+						if( doCache ) {
+							this.cache.ballDataCache[ cacheKey ] = cachedBallData;
+						}
+					}
+
+					var ballCoords = pointOverride === undefined ? this.translateCoords( ball.pos.x, ball.pos.y ) : pointOverride;
+					var gradient = ctx.createRadialGradient( cachedBallData.position.x + ballCoords.x, cachedBallData.position.y + ballCoords.y, cachedBallData.spread, ballCoords.x, ballCoords.y, radius + cachedBallData.distance );
+					for( let colorStopIndex in cachedBallData.colorStops ) {
+						let colorStop = cachedBallData.colorStops[ colorStopIndex ];
+						gradient.addColorStop( colorStop.index, "rgba(" + colorStop.r + "," + colorStop.g + "," + colorStop.b + "," + light.lum + ")" );
+					}
+					return gradient;
+				}
+
+				hexToRgb( hex ) {
+					var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+					return result ? {
+						r: parseInt(result[1], 16),
+						g: parseInt(result[2], 16),
+						b: parseInt(result[3], 16)
+					} : null;
+				}
+
+				rgbToHex( color ) {
+					let r = color.r.toString(16); r = ( r.length < 2 ? '0' : '' ) + r;
+					let g = color.g.toString(16); g = ( g.length < 2 ? '0' : '' ) + g;
+					let b = color.b.toString(16); b = ( b.length < 2 ? '0' : '' ) + b;
+					return '#' + r + g + b;
+				}
+			}
+
+			class BlockFinder {
+				constructor( startCell, field ) {
+					this.startCell = startCell;
+					this.field = field;
+				}
+
+				getPath() {
+					let result = [];
+					if( !this.startConditionsAreMet() ) return result;
+					result.push( this.startCell );
+					this.initUsedPointsMap();
+					let currentIterationCells = [ this.startCell ];
+
+					while( true ) {
+						let nextIterationCells = [];
+						for( let currentCellIndex in currentIterationCells ) {
+							const currentCell = currentIterationCells[currentCellIndex];
+							let adjacentCells = this.getAdjacentCells( currentCell );
+							if( this.hasAdjacentCells( adjacentCells ) ) {
+								nextIterationCells = nextIterationCells.concat( adjacentCells );
+							}
+						}
+						if( nextIterationCells.length == 0 ) break;
+						currentIterationCells = nextIterationCells;
+						result = result.concat( currentIterationCells );
+					}
+					return result;
+				}
+
+				startConditionsAreMet() {
+					return this.field[this.startCell.pos.y][this.startCell.pos.x].ball != null;
+				}
+
+				initUsedPointsMap() {
+					this.usedPointsMap = [];
+					for( let y = 0; y < this.field.length; y++ ) {
+						this.usedPointsMap.push( [] );
+						for( let x = 0; x < this.field[y].length; x++ ) {
+							this.usedPointsMap[y].push( 0 );
+						}
+					}
+					this.usedPointsMap[this.startCell.pos.y][this.startCell.pos.x] = 5;
+				}
+
+				getAdjacentCells( currentCell ) {
+					let adjacentCells = [];
+					if( currentCell.pos.y < this.field.length - 1 ) {
+						let downPoint = new Point( currentCell.pos.x, currentCell.pos.y + 1 );
+						let adjacentCell = this.getCellIfNotUsed( downPoint, currentCell );
+						if( adjacentCell != null ) {
+							adjacentCells.push( adjacentCell );
+						}
+					}
+					if( currentCell.pos.y > 0 ) {
+						let upPoint = new Point( currentCell.pos.x, currentCell.pos.y - 1 );
+						let adjacentCell = this.getCellIfNotUsed( upPoint, currentCell );
+						if( adjacentCell != null ) {
+							adjacentCells.push( adjacentCell );
+						}
+					}
+					if( currentCell.pos.x > 0 ) {
+						let leftPoint = new Point( currentCell.pos.x - 1, currentCell.pos.y );
+						let adjacentCell = this.getCellIfNotUsed( leftPoint, currentCell );
+						if( adjacentCell != null ) {
+							adjacentCells.push( adjacentCell );
+						}
+					}
+					if( currentCell.pos.x < this.field[0].length - 1 ) {
+						let rightPoint = new Point( currentCell.pos.x + 1, currentCell.pos.y );
+						let adjacentCell = this.getCellIfNotUsed( rightPoint, currentCell );
+						if( adjacentCell != null ) {
+							adjacentCells.push( adjacentCell );
+						}
+					}
+					return adjacentCells;
+				}
+
+				hasAdjacentCells( adjacentCells ) {
+					return adjacentCells.length != 0;
+				}
+
+				getCellIfNotUsed( point, referenceCell ) {
+					let cell = this.field[point.y][point.x];
+					if( cell.ball != null && this.usedPointsMap[point.y][point.x] == 0 && cell.ball.colorIndex == referenceCell.ball.colorIndex ) {
+						this.usedPointsMap[point.y][point.x] = 1;
+						return cell;
+					}
+					return null;
+				}
+			}
+		</script>
+		<script type="text/javascript">
+			var jawbreakerGame;
+			function getUrlParam( name ) {
+			    let url = location.href;
+			    name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+			    let regexS = "[\\?&]"+name+"=([^&#]*)";
+			    let regex = new RegExp( regexS );
+			    let results = regex.exec( url );
+			    return results == null ? null : results[1];
+			}
+			window.onload = function() {
+				jawbreakerGame = new GameJawbreaker(
+					null,
+					'jawbreaker',
+					{
+						isLandscape: null,
+						boardSize: null,
+						gameModeIndex: getUrlParam('mode'),
+						gameMode: getUrlParam('mode'),
+						sound: getUrlParam('sound') != '0' && getUrlParam('sound') != 'false'
+					}
+				);
+			}
+		</script>
+	</body>
+</html>
