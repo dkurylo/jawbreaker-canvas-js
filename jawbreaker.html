@@ -23,7 +23,7 @@
 			var gameJawbreakerInstances = [];
 			class Settings {
 				constructor( parentElement, canv, params ) {
-					this.version = '1.00';
+					this.version = '1.01';
 					this.gameModes = [ 'standard', 'continuous', 'shifter', 'megashift' ];
 					this.gameModeNames = [ 'Standard', 'Continuous', 'Shifter', 'Megashift' ];
 					this.gameModeIndex = 1;
@@ -38,6 +38,7 @@
 					this.headerTextPaddingX = 6; //% of cell size
 					this.headerTextPaddingY = 12; //% of cell size
 
+					this.modeIconHoverColor = '#5555FF';
 					this.undoIconHoverColor = '#5555FF';
 
 					this.headerPadding = 40; //% of cell size
@@ -102,15 +103,19 @@
 							if( this.gameModeIndex < 0 ) this.gameModeIndex = 1;
 						}
 					}
-					this.hasNextBalls = this.gameModeIndex == 2 || this.gameModeIndex == 4;
+                    this.setGameMode( this.gameModeIndex );
 
 					this.isMobile = this.isDeviceMobile();
 					this.isLandscape = this.isDeviceLandscape();
 					this.calculateBoardSize( parentElement, canv, this.reportedLandscape, this.reportedSize );
-					if( this.hasNextBalls ) {
-						this.yFieldBallsSize--;
-					}
 				}
+
+                setGameMode( gameModeIndex ) {
+                    this.gameModeIndex = gameModeIndex;
+
+                    this.hasNextBalls = gameModeIndex == 2 || gameModeIndex == 4;
+                    this.yFieldBallsSize = this.hasNextBalls ? this.yFieldSize - 1 : this.yFieldSize;
+                }
 
 				isDeviceMobile() {
 					return ('ontouchstart' in document.documentElement);
@@ -1109,6 +1114,7 @@
 					this.data = new Data( this.settings );
 					this.initGame = true;
 					this.endGame = false;
+                    this.modeSettingsOpen = false;
 				}
 
 				calculateGameScore() {
@@ -1194,12 +1200,31 @@
 				mouseUp( event, timestamp ) {
 					if( this.data.animations.animationInProgress() ) return;
 					this.captureMousePosition( event );
-					this.setActiveCell();
 
-					if( this.isUndoEnabled() && this.isMouseHover( this.getUndoIconLocation() ) ) {
+                    let restartNewGame = false;
+
+                    let isModeSettingsOpenPrevious = this.isModeSettingsOpen;
+                    if( this.isModeSettingsOpen ) {
+                        let newGameModeIndex = this.getModeSettingsPicklistLocations().reduce( ( result, modeSettingsPicklistLocation, modeSettingsPicklistLocationIndex ) => {
+                            return result != null ? result : ( this.isMouseHover( modeSettingsPicklistLocation ) ? modeSettingsPicklistLocationIndex + 1 : null )
+                        }, null );
+                        if( newGameModeIndex != null && newGameModeIndex != this.settings.gameModeIndex ) {
+                            this.isModeSettingsOpen = false;
+                            this.settings.setGameMode( newGameModeIndex );
+                            restartNewGame = true;
+                        }
+                    }
+                    if( this.isModeEnabled() && this.isMouseHover( this.getModeIconLocation() ) ) {
+                        this.isModeSettingsOpen = !this.isModeSettingsOpen;
+                    }
+
+                    if( !this.isModeSettingsOpen && !isModeSettingsOpenPrevious ) {
+                        this.setActiveCell();
+                    }
+					if( !this.isModeSettingsOpen && this.isUndoEnabled() && this.isMouseHover( this.getUndoIconLocation() ) ) {
 						this.data.resetUndoSnapshot( this );
 					}
-					if( this.endGame && this.isMouseHover( this.getStartOverButtonLocation() ) ) {
+					if( restartNewGame || ( this.endGame && this.isMouseHover( this.getStartOverButtonLocation() ) ) ) {
 						this.newGame();
 						Sounds.playSound( this, this.sounds.sound_newgame );
 					}
@@ -1291,13 +1316,13 @@
 
 				drawBoard() {
 					this.ctx.clearRect(0, 0, this.canv.width, this.canv.height);
-					this.drawHeader();
 					this.drawField();
 					this.drawNextBalls();
 					this.drawCellHover();
 					this.drawCellActive();
 					this.drawBalls();
 					this.drawHint();
+					this.drawHeader();
 					this.drawEndGame();
 				}
 
@@ -1320,6 +1345,7 @@
 					if( this.settings.isMobile ) return;
 					if( this.data.hoverCell == null ) return;
 					if( this.data.animations.animationInProgress() ) return;
+                    if( this.isModeSettingsOpen ) return;
 					const ball = this.data.field[this.data.hoverCell.pos.y][this.data.hoverCell.pos.x].ball;
 					if( this.data.hoverCells.length > 1 ) {
 						const colorIndex = this.data.hoverCell.ball.colorIndex;
@@ -1384,6 +1410,13 @@
 				}
 
 				drawHeader() {
+                    this.drawScore();
+					this.drawUndoButton();
+                    this.drawModeButton();
+                    this.drawModeSettingsPicklist();
+				}
+
+                drawScore() {
 					const isDeviceLandscape = this.settings.isLandscape;
 
 					let scoreElemPos = new Point( isDeviceLandscape ? this.settings.lineWidth : this.settings.borderWidth + this.settings.xMarginAmount + this.settings.lineWidth,
@@ -1419,60 +1452,140 @@
 					this.ctx.fillText( this.data.boardScore, scoreElemPos.x + 0.5*(scoreElemSize.x + this.settings.lineWidth), scoreElemPos.y + scoreElemSize.y/2 + scoreElemFontSize*0.07 );
 					this.ctx.textAlign = oldTextAlignScore;
 					this.ctx.textBaseline = oldTextBaselineScore;
+                }
 
+                getModeIconLocation() {
+                    const isDeviceLandscape = this.settings.isLandscape;
 					let modeElemPos = new Point( isDeviceLandscape ? this.settings.lineWidth : this.settings.borderWidth + this.settings.xMarginAmount + 4*this.settings.fullCellSize + this.settings.lineWidth,
 												 isDeviceLandscape ? this.settings.headerPaddingAmount + 2*(this.settings.headerTextPaddingYAmount + this.settings.headerTextFontSizePadding + this.settings.headerTextFontSizeAmount) + this.settings.fullCellSize + this.settings.lineWidth : this.settings.yFieldPos - this.settings.yMarginAmount - this.settings.borderWidth - this.settings.fullCellSize - this.settings.headerPaddingAmount );
 					let modeElemSize = new Point( isDeviceLandscape ? 3*this.settings.fullCellSize - this.settings.lineWidth : 5*this.settings.fullCellSize - this.settings.lineWidth,
 												  this.settings.cellSize );
+                    let endPoint = new Point( modeElemPos.x + modeElemSize.x, modeElemPos.y + modeElemSize.y );
+                    return {
+						startPoint: modeElemPos,
+						endPoint: endPoint,
+						width: modeElemSize.x,
+						height: modeElemSize.y
+                    };
+                }
+                
+                drawModeButton() {
+                    const isDeviceLandscape = this.settings.isLandscape;
+                    let modeItemLocation = this.getModeIconLocation();
+
+                    let isMouseHoverMode = this.isMouseHover( modeItemLocation );
+                    let isModeAvailable = this.isModeAvailable();
+                    let isModeEnabled = this.isModeEnabled();
 
 					this.ctx.fillStyle = this.settings.headerTextFontColor;
 					this.ctx.font = '' + this.settings.headerTextFontSizeAmount + 'px ' + this.settings.headerTextFont;
-					this.ctx.fillText( 'Mode:', modeElemPos.x + this.settings.headerTextPaddingXAmount, modeElemPos.y - this.settings.headerTextPaddingYAmount );
+					this.ctx.fillText( 'Mode:', modeItemLocation.startPoint.x + this.settings.headerTextPaddingXAmount, modeItemLocation.startPoint.y - this.settings.headerTextPaddingYAmount );
 
-					this.ctx.fillStyle = this.settings.backgroundColor;
-					this.ctx.fillRect( modeElemPos.x, modeElemPos.y,
-									   modeElemSize.x, modeElemSize.y );
+                    this.ctx.globalAlpha = 0.08;
+					this.ctx.fillStyle = isModeEnabled && isMouseHoverMode ? this.settings.modeIconHoverColor : this.settings.backgroundColor;
+					this.ctx.fillRect( modeItemLocation.startPoint.x, modeItemLocation.startPoint.y,
+									   modeItemLocation.width, modeItemLocation.height );
+                    this.ctx.globalAlpha = 1;
+
 					for( let x=0; x<=1; x++ ) {
-						this.drawLine( modeElemPos.x - this.settings.lineWidth + x*modeElemSize.x, modeElemPos.y - this.settings.lineWidth,
-									   this.settings.lineWidth, modeElemSize.y + this.settings.lineWidth,
+						this.drawLine( modeItemLocation.startPoint.x - this.settings.lineWidth + x*modeItemLocation.width, modeItemLocation.startPoint.y - this.settings.lineWidth,
+									   this.settings.lineWidth, modeItemLocation.height + this.settings.lineWidth,
 									   this.settings.borderColor );
 					}
 					for( let y=0; y<=1; y++ ) {
-						this.drawLine( modeElemPos.x - this.settings.lineWidth, modeElemPos.y - this.settings.lineWidth + y*(modeElemSize.y + this.settings.lineWidth),
-									   modeElemSize.x + this.settings.lineWidth, this.settings.lineWidth,
+						this.drawLine( modeItemLocation.startPoint.x - this.settings.lineWidth, modeItemLocation.startPoint.y - this.settings.lineWidth + y*(modeItemLocation.height + this.settings.lineWidth),
+									   modeItemLocation.width + this.settings.lineWidth, this.settings.lineWidth,
 									   this.settings.borderColor );
 					}
 
 					const oldTextBaselineGameMode = this.ctx.textBaseline;
 					const oldTextAlignGameMode = this.ctx.textAlign;
-					this.ctx.fillStyle = this.settings.headerTextFontColor;
+					this.ctx.fillStyle = isModeEnabled && isMouseHoverMode ? this.settings.modeIconHoverColor : this.settings.headerTextFontColor;
 					this.ctx.textAlign = 'center';
 					let modeElemFontSize = this.settings.ballSize*2*0.8;
 					this.ctx.font = '' + modeElemFontSize * ( isDeviceLandscape ? 0.63 : 1 ) + 'px ' + this.settings.headerTextFont;
 					this.ctx.textBaseline = 'middle';
-					this.ctx.fillText( this.settings.gameModeNames[this.settings.gameModeIndex-1], modeElemPos.x + 0.5*(modeElemSize.x + this.settings.lineWidth), modeElemPos.y + modeElemSize.y/2 + modeElemFontSize*0.06 );
+					this.ctx.fillText( this.settings.gameModeNames[this.settings.gameModeIndex-1], modeItemLocation.startPoint.x + 0.5*(modeItemLocation.width + this.settings.lineWidth), modeItemLocation.startPoint.y + modeItemLocation.height/2 + modeElemFontSize*0.06 );
 					this.ctx.textAlign = oldTextAlignGameMode;
 					this.ctx.textBaseline = oldTextBaselineGameMode;
+                }
 
-					this.drawUndoButton();
+                drawModeSettingsPicklist() {
+                    if( !this.isModeSettingsOpen ) return;
+
+                    const isDeviceLandscape = this.settings.isLandscape;
+                    let modeSettingLocation = this.getModeIconLocation();
+
+                    modeSettingLocation.startPoint.y += modeSettingLocation.height;
+                    modeSettingLocation.endPoint.y += modeSettingLocation.height;
+                    this.settings.gameModeNames.forEach( ( gameModeName, gameModeIndex ) => {
+                        let isMouseHoverModeSetting = this.isMouseHover( modeSettingLocation );
+                        let isCurrentMode = this.settings.gameModeIndex == gameModeIndex + 1;
+
+                        this.ctx.globalAlpha = 0.95;
+                        this.ctx.fillStyle = this.settings.backgroundColor;
+                        this.ctx.fillRect( modeSettingLocation.startPoint.x, modeSettingLocation.startPoint.y,
+                                           modeSettingLocation.width, modeSettingLocation.height );
+                        this.ctx.globalAlpha = 1;
+
+                        this.ctx.globalAlpha = 0.08;
+                        this.ctx.fillStyle = isMouseHoverModeSetting && !isCurrentMode ? this.settings.modeIconHoverColor : this.settings.backgroundColor;
+                        this.ctx.fillRect( modeSettingLocation.startPoint.x, modeSettingLocation.startPoint.y,
+                                           modeSettingLocation.width, modeSettingLocation.height );
+                        this.ctx.globalAlpha = 1;
+
+                        for( let x=0; x<=1; x++ ) {
+                            this.drawLine( modeSettingLocation.startPoint.x - this.settings.lineWidth + x*modeSettingLocation.width, modeSettingLocation.startPoint.y - this.settings.lineWidth,
+                                           this.settings.lineWidth, modeSettingLocation.height + this.settings.lineWidth,
+                                           this.settings.borderColor );
+                        }
+                        for( let y=0; y<=1; y++ ) {
+                            this.drawLine( modeSettingLocation.startPoint.x - this.settings.lineWidth, modeSettingLocation.startPoint.y - this.settings.lineWidth + y*(modeSettingLocation.height + this.settings.lineWidth),
+                                           modeSettingLocation.width + this.settings.lineWidth, this.settings.lineWidth,
+                                           this.settings.borderColor );
+                        }
+
+                        const oldTextBaselineGameMode = this.ctx.textBaseline;
+                        const oldTextAlignGameMode = this.ctx.textAlign;
+                        this.ctx.fillStyle = isMouseHoverModeSetting && !isCurrentMode ? this.settings.modeIconHoverColor : this.settings.headerTextFontColor;
+                        this.ctx.globalAlpha = !isCurrentMode ? 1 : 0.25;
+                        this.ctx.textAlign = 'center';
+                        let modeElemFontSize = this.settings.ballSize*2*0.8;
+                        this.ctx.font = '' + modeElemFontSize * ( isDeviceLandscape ? 0.63 : 1 ) + 'px ' + this.settings.headerTextFont;
+                        this.ctx.textBaseline = 'middle';
+                        this.ctx.fillText( gameModeName, modeSettingLocation.startPoint.x + 0.5*(modeSettingLocation.width + this.settings.lineWidth), modeSettingLocation.startPoint.y + modeSettingLocation.height/2 + modeElemFontSize*0.06 );
+                        this.ctx.textAlign = oldTextAlignGameMode;
+                        this.ctx.textBaseline = oldTextBaselineGameMode;
+                        this.ctx.globalAlpha = 1;
+
+                        modeSettingLocation.startPoint.y += modeSettingLocation.height;
+                        modeSettingLocation.endPoint.y += modeSettingLocation.height;
+                    });
+                }
+
+                getModeSettingsPicklistLocations() {
+                    const isDeviceLandscape = this.settings.isLandscape;
+                    let modeSettingLocation = this.getModeIconLocation();
+                    
+                    modeSettingLocation.startPoint.y += modeSettingLocation.height;
+                    modeSettingLocation.endPoint.y += modeSettingLocation.height;
+                    let modeSettingsLocations = [];
+                    this.settings.gameModeNames.forEach( ( gameModeName, gameModeIndex ) => {
+                        modeSettingsLocations.push( JSON.parse( JSON.stringify( modeSettingLocation ) ) );
+
+                        modeSettingLocation.startPoint.y += modeSettingLocation.height;
+                        modeSettingLocation.endPoint.y += modeSettingLocation.height;
+                    });
+
+                    return modeSettingsLocations;
+                }
+
+				isModeAvailable() {
+					return !this.endGame;
 				}
 
-				drawNextBalls() {
-					if( this.settings.hasNextBalls ) {
-						let nextBalls = this.data.nextBalls[this.data.nextBalls.length-1]
-						let xFieldCenter = Math.round( this.settings.xFieldPos + this.settings.xFieldSize*this.settings.fullCellSize/2 );
-						let ballsWidth = nextBalls.length * this.settings.nextBallCellSize;
-						let nextBallsPos = new Point( Math.round( xFieldCenter - ballsWidth/2 + this.settings.lineWidth ),
-													  Math.round( this.settings.yFieldPos + this.settings.yMarginAmount + (this.settings.yFieldSize-0.5)*this.settings.fullCellSize ) - this.settings.nextBallSize + this.settings.lineWidth );
-
-						for( let newBallIndex=0; newBallIndex < nextBalls.length; newBallIndex++ ) {
-							const newBall = nextBalls[ newBallIndex ];
-							let point = new Point( nextBallsPos.x + newBallIndex*this.settings.nextBallCellSize,
-												   nextBallsPos.y );
-							this.drawBall( newBall, point, this.settings.nextBallSize, this.ctx, this.cache.nextBallsRenderCanvas );
-						}
-					}
-
+				isModeEnabled() {
+					return this.isModeAvailable() && !this.data.animations.animationInProgress();
 				}
 
 				getUndoIconLocation() {
@@ -1576,11 +1689,29 @@
 				}
 
 				isUndoAvailable() {
-					return this.data.undoSnapshot != null && !this.endGame;
+					return this.data.undoSnapshot != null && !this.isModeSettingsOpen && !this.endGame;
 				}
 
 				isUndoEnabled() {
 					return this.isUndoAvailable() && !this.data.animations.animationInProgress();
+				}
+
+				drawNextBalls() {
+					if( this.settings.hasNextBalls ) {
+						let nextBalls = this.data.nextBalls[this.data.nextBalls.length-1]
+						let xFieldCenter = Math.round( this.settings.xFieldPos + this.settings.xFieldSize*this.settings.fullCellSize/2 );
+						let ballsWidth = nextBalls.length * this.settings.nextBallCellSize;
+						let nextBallsPos = new Point( Math.round( xFieldCenter - ballsWidth/2 + this.settings.lineWidth ),
+													  Math.round( this.settings.yFieldPos + this.settings.yMarginAmount + (this.settings.yFieldSize-0.5)*this.settings.fullCellSize ) - this.settings.nextBallSize + this.settings.lineWidth );
+
+						for( let newBallIndex=0; newBallIndex < nextBalls.length; newBallIndex++ ) {
+							const newBall = nextBalls[ newBallIndex ];
+							let point = new Point( nextBallsPos.x + newBallIndex*this.settings.nextBallCellSize,
+												   nextBallsPos.y );
+							this.drawBall( newBall, point, this.settings.nextBallSize, this.ctx, this.cache.nextBallsRenderCanvas );
+						}
+					}
+
 				}
 
 				isMouseHover( item ) {
@@ -2182,7 +2313,7 @@
 					null,
 					'jawbreaker',
 					{
-						isLandscape: null,
+						isLandscape: getUrlParam('landscape') == null ? null : ( getUrlParam('landscape') != '0' && getUrlParam('landscape') != 'false' ),
 						boardSize: null,
 						gameModeIndex: getUrlParam('mode'),
 						gameMode: getUrlParam('mode'),
