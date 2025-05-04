@@ -137,10 +137,10 @@
 				calculateBoardSize( parentElement, canv, reportedLandscape, reportedSize ) {
 					let isLandscape = reportedLandscape ? reportedLandscape : this.isLandscape;
 					if( isLandscape ) {
-						this.canvasHeight = this.scaleFactor * (reportedSize ? reportedSize : ( this.isMobile ? parentElement.clientHeight * 0.95 : 568 ) ); //568(=44) +/- n*2*12
+						this.canvasHeight = this.scaleFactor * (reportedSize ? reportedSize : ( this.isMobile ? parentElement.clientHeight * 0.95 : 740 ) ); //568(size=44) +/- n*(4*43) //568(size=44); 740(size=58); 912(size=72)
 						this.cellSize = (this.canvasHeight - 2*(this.scaleFactor-1) - 2*this.borderWidth - 2*this.lineWidth*this.yFieldSize)/(this.yFieldSize + 2*this.yMargin/100);
 					} else {
-						this.canvasWidth = this.scaleFactor * ( reportedSize ? reportedSize : ( this.isMobile ? parentElement.clientWidth * 0.95 : 552 ) ); //552(=44) +/- n*2*11
+						this.canvasWidth = this.scaleFactor * ( reportedSize ? reportedSize : ( this.isMobile ? parentElement.clientWidth * 0.95 : 624 ) );  //552(size=44) +/- n*(11+1) //552(size=44); 624(size=50); 768(size=62)
 						this.cellSize = (this.canvasWidth - 2*(this.scaleFactor-1) - 2*this.borderWidth - 2*this.lineWidth*this.xFieldSize)/(this.xFieldSize + 2*this.xMargin/100);
 					}
 
@@ -1030,7 +1030,9 @@
 					this.canv.addEventListener( 'mousemove', function mouseMoveAction(event) { GameJawbreaker.requestGameAction( 'mousemove', event, canvasId ); }, false );
 					if( this.settings.isMobile ) {
 						this.canv.addEventListener( 'orientationchange', function windowOrientationChangeAction(event) { GameJawbreaker.detectOrientationChange(); } );
-					}
+					} else {
+                        window.addEventListener( 'resize', function windowResizeChangeAction(event) { GameJawbreaker.detectWindowSizeChange(); } );
+                    }
 
 					this.readCookieData();
 
@@ -1043,6 +1045,12 @@
 					}
 				}
 
+                static detectWindowSizeChange() {
+					for( let gameInstanceIndex in gameJawbreakerInstances ) {
+						gameJawbreakerInstances[ gameInstanceIndex ].detectWindowSizeChange();
+					}
+                }
+
 				detectOrientationChange() {
 					let isLandscape = this.settings.isDeviceLandscape( true );
 					if( this.settings.isLandscape != isLandscape ) {
@@ -1054,6 +1062,10 @@
 						this.drawBoard();
 					}
 				}
+
+                detectWindowSizeChange() {
+                console.log('1');
+                }
 
 				static requestGameAction( action, event, canvasId ) {
 					event.stopPropagation();
@@ -1212,9 +1224,11 @@
                             this.isModeSettingsOpen = false;
                             this.settings.setGameMode( newGameModeIndex );
                             restartNewGame = true;
+                        } else if( newGameModeIndex == null ) {
+                            this.isModeSettingsOpen = false;
                         }
                     }
-                    if( this.isModeEnabled() && this.isMouseHover( this.getModeIconLocation() ) ) {
+                    if( this.isModeEnabled() && this.isMouseHover( this.getModeIconLocation() ) && !isModeSettingsOpenPrevious ) {
                         this.isModeSettingsOpen = !this.isModeSettingsOpen;
                     }
 
